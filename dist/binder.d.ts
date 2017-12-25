@@ -1,13 +1,15 @@
 import { Instrumentation, PropertyCallType } from './instrumentation';
 export interface BinderDispatchDetail {
     binder: Binder;
-    dispatchValue: any;
-    dispatchOldValue: any;
-    value: any;
-    oldValue: any;
-    operation: DispatchOperation;
-    path: Array<string>;
-    match: DispatchMatch;
+    content: {
+        dispatchValue: any;
+        dispatchOldValue: any;
+        value: any;
+        oldValue: any;
+        operation: DispatchOperation;
+        path: Array<string>;
+        match: DispatchMatch;
+    };
 }
 export declare type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any;
 export declare type DispatchOperation = 'call' | 'delete' | 'set';

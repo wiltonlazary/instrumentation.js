@@ -56,13 +56,15 @@ class Binder {
             }
             const dispatchDetail = {
                 binder: this,
-                dispatchValue: value,
-                dispatchOldValue: oldValue,
-                value: valueLocal,
-                oldValue: oldValueLocal,
-                operation: operation,
-                path: path,
-                match: match
+                content: {
+                    dispatchValue: value,
+                    dispatchOldValue: oldValue,
+                    value: valueLocal,
+                    oldValue: oldValueLocal,
+                    operation: operation,
+                    path: path,
+                    match: match
+                }
             };
             const savedBinderBinderDispatchDetail = _currentBinderDispatchDetail;
             _currentBinderDispatchDetail = dispatchDetail;

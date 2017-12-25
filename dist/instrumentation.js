@@ -402,6 +402,7 @@ class Instrumentation {
                             }
                         }
                         else if (path.length > binder.producerPropertyKeyPathParts.length &&
+                            pathStr.startsWith(`${binder.producerPropertyKeyPath}.`) &&
                             binder.producerPropertyKeyPathRegExp &&
                             binder.producerPropertyKeyPathRegExp.exec(path.slice(binder.producerPropertyKeyPathParts.length).join('.'))) {
                             if (binder.dispatch(value, oldValue, operation, path, '>') === exports.ABORT_ACTION) {

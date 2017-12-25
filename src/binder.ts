@@ -2,13 +2,15 @@ import { Instrumentation, PropertyCallType, valueFromPath } from './instrumentat
 
 export interface BinderDispatchDetail {
     binder: Binder
-    dispatchValue: any
-    dispatchOldValue: any
-    value: any
-    oldValue: any
-    operation: DispatchOperation
-    path: Array<string>
-    match: DispatchMatch
+    content: {
+        dispatchValue: any
+        dispatchOldValue: any
+        value: any
+        oldValue: any
+        operation: DispatchOperation
+        path: Array<string>
+        match: DispatchMatch
+    }
 }
 
 let _currentBinderDispatchDetail: BinderDispatchDetail = null
@@ -78,13 +80,15 @@ export class Binder {
 
             const dispatchDetail: BinderDispatchDetail = {
                 binder: this,
-                dispatchValue: value,
-                dispatchOldValue: oldValue,
-                value: valueLocal,
-                oldValue: oldValueLocal,
-                operation: operation,
-                path: path,
-                match: match
+                content: {
+                    dispatchValue: value,
+                    dispatchOldValue: oldValue,
+                    value: valueLocal,
+                    oldValue: oldValueLocal,
+                    operation: operation,
+                    path: path,
+                    match: match
+                }
             }
 
             const savedBinderBinderDispatchDetail = _currentBinderDispatchDetail

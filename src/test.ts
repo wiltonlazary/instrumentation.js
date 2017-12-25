@@ -7,7 +7,7 @@ class Person {
 }
 
 class Test {
-    _obj1: any = { x: { y: 1 } }
+    _obj1: any = []
 
     get obj1() {
         return this._obj1
@@ -24,20 +24,33 @@ class Test {
 
 const test = new Test() as any
 
+// Data binding
 test.bindOut([
     ['obj1.x.y/.*', test, 'message'],
     ['obj1.name', test, 'message'],
     ['obj1.data/.*', (value, detail) => {
-        console.log('detail:', detail)
+        console.log('bindOut detail content:', JSON.stringify(detail.content))
     }]
 ])
 
-test.obj1.x.y = 10
-test.obj1 = { x: { y: {} } }
+test.bindIn([
+    [test, 'obj1.data/.*', (value, detail) => {
+        console.log('bindIn detail content:', JSON.stringify(detail.content))
+    }]
+])
+
+//TODO: array manipulation tests
+test.obj1.push('xxx-xxx')
+
+// Object deep data binding tests
+
+test.obj1 = { x: { y: { z: 1 } } }
 test.obj1.x.y.z = {}
+test.obj1.x.y = 10
 delete test.obj1.x
 test.obj1 = new Person()
 test.obj1.name = 'new name'
 test.obj1.data = { count: 1, content: '---' }
 test.obj1.data.content = { type: 'new_content' }
-test.obj1 = null
+
+
