@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible Node.js debug attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "type": "node",
+            "runtimeArgs": ["--expose-wasm"],
+            "args": [],
+            "protocol": "inspector",
+            "request": "launch",
+            "stopOnEntry": false,
+            "smartStep": true,
+            "name": "test.js",
+            "cwd": "${workspaceRoot}",
+            "program": "${workspaceRoot}/dist/test.js",
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceRoot}/dist/**/*.js"
+            ],
+            "env": {
+                "NODE_ENV": "debug"
+            }
+        } 
+    ]
+}

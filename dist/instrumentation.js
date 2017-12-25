@@ -66,15 +66,18 @@ exports.getPropertyCallTypeFromPrototypeFromInstance = getPropertyCallTypeFromPr
 function valueFromPath(object, path) {
     if (object instanceof Object) {
         let current = object;
-        path.forEach((element, index) => {
+        let index = 0;
+        for (const element of path) {
+            const test = object; //Test
             current = current[element];
             if (!(current instanceof Object)) {
                 if (index < path.length - 1) {
                     current = undefined;
                 }
-                return;
+                break;
             }
-        });
+            index += 1;
+        }
         return current;
     }
     else {
@@ -92,20 +95,20 @@ class Instrumentation {
     }
     clear() {
         if (this.outBinders !== null) {
-            this.outBinders.forEach(element => {
-                element.forEach(binder => {
+            for (const element of this.outBinders.values()) {
+                for (const binder of element) {
                     binder.dispose();
-                });
+                }
                 element.clear();
-            });
+            }
         }
         if (this.inBinders !== null) {
-            this.inBinders.forEach(element => {
-                element.forEach(binder => {
+            for (const element of this.inBinders.values()) {
+                for (const binder of element) {
                     binder.dispose();
-                });
+                }
                 element.clear();
-            });
+            }
         }
     }
     dispose() {
@@ -156,15 +159,21 @@ class Instrumentation {
                 let newValue = value;
                 if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
                     if (value.isProxy) {
-                        if (value.observer !== instrumentation) {
-                            value.addObserver(instrumentation, propertyKey);
+                        const proxyHandler = value.proxyHandler;
+                        if (proxyHandler.observer !== instrumentation) {
+                            proxyHandler.addObserver(instrumentation, propertyKey);
                         }
                     }
                     else {
                         newValue = proxy_handler_1.ProxyHandler.create(value, instrumentation, propertyKey);
                     }
                 }
-                this.instrumentation.notify(newValue, backingProperty, 'set', [propertyKey], [(value) => { backingProperty = value; }, this]);
+                this.instrumentation.notify(newValue, backingProperty, 'set', [propertyKey], [(value) => {
+                        if (backingProperty && backingProperty.isProxy) {
+                            backingProperty.proxyHandler.removeObserver(instrumentation);
+                        }
+                        backingProperty = value;
+                    }, this]);
             },
             enumerable: true,
             configurable: false
@@ -232,18 +241,25 @@ class Instrumentation {
                 get: originalDescriptor.get,
                 set: function (value) {
                     const instrumentation = this.instrumentation;
+                    let oldValue = originalDescriptor.get.call(this);
                     let newValue = value;
                     if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyDescriptorPrototype.propertyKey)) {
                         if (value.isProxy) {
-                            if (value.observer !== instrumentation) {
-                                value.addObserver(instrumentation, propertyDescriptorPrototype.propertyKey);
+                            const proxyHandler = value.proxyHandler;
+                            if (proxyHandler.observer !== instrumentation) {
+                                proxyHandler.addObserver(instrumentation, propertyDescriptorPrototype.propertyKey);
                             }
                         }
                         else {
                             newValue = proxy_handler_1.ProxyHandler.create(value, instrumentation, propertyDescriptorPrototype.propertyKey);
                         }
                     }
-                    this.instrumentation.notify(newValue, originalDescriptor.get(), 'set', [propertyDescriptorPrototype.propertyKey], [(value) => { originalDescriptor.set.call(this, value); }, this]);
+                    this.instrumentation.notify(newValue, oldValue, 'set', [propertyDescriptorPrototype.propertyKey], [(value) => {
+                            if (oldValue && oldValue.isProxy) {
+                                oldValue.proxyHandler.removeObserver(instrumentation);
+                            }
+                            originalDescriptor.set.call(this, value);
+                        }, this]);
                 },
                 enumerable: originalDescriptor.enumerable,
                 configurable: originalDescriptor.configurable
@@ -313,8 +329,9 @@ class Instrumentation {
                         const descriptor = producerPropertyCallTypeDetail[1];
                         const value = descriptor.get.call(this.owner);
                         if (value.isProxy) {
-                            if (value.observer !== this) {
-                                value.addObserver(this, producerPropertyKey);
+                            const proxyHandler = value.proxyHandler;
+                            if (proxyHandler.observer !== this) {
+                                proxyHandler.addObserver(this, producerPropertyKey);
                             }
                         }
                         else {
@@ -370,18 +387,18 @@ class Instrumentation {
             if (bindersByKey !== undefined) {
                 const pathStr = path.join('.');
                 const pathToMatch = path.slice(1).join('.');
-                bindersByKey.forEach(binder => {
+                for (const binder of bindersByKey) {
                     if (binder.active) {
                         if (binder.producerPropertyKeyPath == pathStr) {
                             if (binder.dispatch(value, oldValue, operation, path, '=') === exports.ABORT_ACTION) {
                                 abortAction = true;
-                                return;
+                                break;
                             }
                         }
                         else if (binder.producerPropertyKeyPathParts.slice(0, binder.producerPropertyKeyPathParts.length - 1).join('.').startsWith(pathStr)) {
                             if (binder.dispatch(value, oldValue, operation, path, '<') === exports.ABORT_ACTION) {
                                 abortAction = true;
-                                return;
+                                break;
                             }
                         }
                         else if (path.length > binder.producerPropertyKeyPathParts.length &&
@@ -389,11 +406,11 @@ class Instrumentation {
                             binder.producerPropertyKeyPathRegExp.exec(path.slice(binder.producerPropertyKeyPathParts.length).join('.'))) {
                             if (binder.dispatch(value, oldValue, operation, path, '>') === exports.ABORT_ACTION) {
                                 abortAction = true;
-                                return;
+                                break;
                             }
                         }
                     }
-                });
+                }
             }
             if (!abortAction && !!execute) {
                 return execute[0].call(execute[1], value);

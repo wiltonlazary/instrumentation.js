@@ -4,7 +4,7 @@
     "description": "Instrumentation and deep data binding for all objects",
     "main": "dist/index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "node dist/test.js"
     },
     "repository": {
         "type": "git",
