@@ -1,15 +1,13 @@
 import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType } from './binder'
 import { ProxyHandler } from './proxy_handler'
 
+export const ABORT_ACTION = { toString: () => 'ABORT_ACTION' }
+export type PropertyCallType = 'none' | 'function' | 'setter'
 export type PropertyCallTypeDetail = [PropertyCallType, any]
 
 const prototypeInstrumented = new Map<any, Map<any, PropertyCallTypeDetail>>()
 const propertyCallTypeFromPrototypeCache = new Map<any, Map<any, PropertyCallTypeDetail>>()
 const binderInstrumented = new Map<any, Map<any, PropertyCallTypeDetail>>()
-
-export const ABORT_ACTION = { toString: () => 'ABORT_ACTION' }
-
-export type PropertyCallType = 'none' | 'function' | 'setter' | 'ownSetter'
 
 export type BindOutParamsType = Array<
     [string, (value: any, detai: BinderDispatchDetail) => any] |
@@ -26,6 +24,7 @@ export type BindInParamsType = Array<
     >
 
 export interface PropertyDescriptorPrototype {
+    isPropertyDescriptorPrototype: boolean
     propertyKey: string
     descriptor: PropertyDescriptor
     prototype: any
@@ -57,6 +56,7 @@ export function getPropertyDescriptorPrototype(prototype: any, propertyKey: stri
     } while (descriptor === undefined && !!nextPrototype)
 
     return descriptor === undefined ? undefined : {
+        isPropertyDescriptorPrototype: true,
         propertyKey: propertyKey,
         descriptor: descriptor,
         prototype: prototype
@@ -192,75 +192,18 @@ export class Instrumentation {
         }
     }
 
-    defineOwnProperty(propertyKey: string): [PropertyCallType, PropertyDescriptor] {
-        let backingProperty = this.owner[propertyKey]
-        delete this.owner[propertyKey]
-
-        const backingPropertyDescriptor: PropertyDescriptor = {
-            get: function () {
-                return backingProperty
-            },
-            set: function (value) {
-                backingProperty = value
-            },
-            enumerable: false,
-            configurable: false
-        }
-
-        Object.defineProperty(this.owner, propertyKey, {
-            get: function () {
-                return backingProperty
-            },
-            set: function (value) {
-                const instrumentation = this.instrumentation
-                let newValue = value
-
-                if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
-                    if (value.isProxy) {
-                        const proxyHandler = value.proxyHandler
-
-                        if (proxyHandler.observer !== instrumentation) {
-                            proxyHandler.addObserver(instrumentation, propertyKey)
-                        }
-                    } else {
-                        newValue = ProxyHandler.create(value, instrumentation, propertyKey)
-                    }
-                }
-
-                this.instrumentation.notify(
-                    newValue, backingProperty, 'set', [propertyKey],
-                    [(value) => {
-                        if (backingProperty && backingProperty.isProxy) {
-                            backingProperty.proxyHandler.removeObserver(instrumentation)
-                        }
-
-                        backingProperty = value
-                    }, this]
-                )
-            },
-            enumerable: true,
-            configurable: false
-        })
-
-        return ['ownSetter', backingPropertyDescriptor]
-    }
-
-    ensureIntrumentation(propertyKey: string): PropertyCallTypeDetail {
+    ensureIntrumentation(propertyKey: string, instrumentPrototype: boolean = false): PropertyCallTypeDetail {
         const ownerPrototype = this.owner.constructor.prototype
         let result: PropertyCallTypeDetail = ['none', null]
 
         if (this.ownInstrumented !== null && this.ownInstrumented.has(propertyKey)) {
             result = this.ownInstrumented.get(propertyKey)
         } else if (!binderInstrumented.has(ownerPrototype) || !binderInstrumented.get(ownerPrototype).has(propertyKey)) {
-            if (Object.getOwnPropertyDescriptor(this.owner, propertyKey) !== undefined) {
-                result = this.defineOwnProperty(propertyKey)
+            const ownPropertyDescriptor = Object.getOwnPropertyDescriptor(this.owner, propertyKey)
 
-                if (this.ownInstrumented === null) {
-                    this.ownInstrumented = new Map()
-                }
-
-                this.ownInstrumented.set(propertyKey, result)
-            } else {
+            if (ownPropertyDescriptor !== undefined) {
+                result = this.instrumentOwn(propertyKey, ownPropertyDescriptor)
+            } else if (instrumentPrototype) {
                 let binderRegisteredMap: Map<any, PropertyCallTypeDetail> = binderInstrumented.get(ownerPrototype)
 
                 if (!binderRegisteredMap) {
@@ -283,13 +226,26 @@ export class Instrumentation {
                         prototypeInstrumented.set(propertyDescriptorPrototype.prototype, prototypeRegisteredMap)
                     }
 
-                    result = this.observed(propertyDescriptorPrototype)
+                    result = this.instrument(
+                        propertyDescriptorPrototype.prototype,
+                        propertyDescriptorPrototype.propertyKey,
+                        propertyDescriptorPrototype.descriptor
+                    )
+
                     prototypeRegisteredMap.set(propertyKey, result)
                 } else {
                     result = prototypeInstrumented.get(propertyDescriptorPrototype.prototype).get(propertyKey) as any
                 }
 
                 binderRegisteredMap.set(propertyKey, result)
+            } else {
+                const propertyDescriptorPrototype = getPropertyDescriptorPrototype(ownerPrototype, propertyKey)
+
+                if (!propertyDescriptorPrototype) {
+                    throw new Error(`Property key not found on owner prototype: ${propertyKey}`)
+                } else {
+                    result = this.instrumentOwn(propertyKey, propertyDescriptorPrototype.descriptor)
+                }
             }
         } else {
             result = binderInstrumented.get(ownerPrototype).get(propertyKey) as any
@@ -298,45 +254,45 @@ export class Instrumentation {
         return result
     }
 
-    observed(propertyDescriptorPrototype: PropertyDescriptorPrototype): PropertyCallTypeDetail {
-        if (typeof propertyDescriptorPrototype.descriptor.value === 'function') {
-            const originalMethod = propertyDescriptorPrototype.descriptor.value
-            delete propertyDescriptorPrototype.prototype[propertyDescriptorPrototype.propertyKey]
+    instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail {
+        if (typeof descriptor.value === 'function') {
+            const originalMethod = descriptor.value
+            delete target[propertyKey]
 
-            propertyDescriptorPrototype.prototype[propertyDescriptorPrototype.propertyKey] = function () {
+            target[propertyKey] = function () {
                 const value = arguments
 
                 this.instrumentation.notify(
-                    value, undefined, 'call', [propertyDescriptorPrototype.propertyKey],
+                    value, undefined, 'call', [propertyKey],
                     [(value) => { return originalMethod.apply(this, value) }, this]
                 )
             }
 
             return ['function', originalMethod]
-        } else if (propertyDescriptorPrototype.descriptor.set !== undefined) {
-            const originalDescriptor = propertyDescriptorPrototype.descriptor
+        } else if (descriptor.set !== undefined) {
+            const originalDescriptor = descriptor
 
-            Object.defineProperty(propertyDescriptorPrototype.prototype, propertyDescriptorPrototype.propertyKey, {
+            Object.defineProperty(target, propertyKey, {
                 get: originalDescriptor.get,
                 set: function (value) {
                     const instrumentation = this.instrumentation
                     let oldValue = originalDescriptor.get.call(this)
                     let newValue = value
 
-                    if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyDescriptorPrototype.propertyKey)) {
+                    if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
                         if (value.isProxy) {
                             const proxyHandler = value.proxyHandler
 
                             if (proxyHandler.observer !== instrumentation) {
-                                proxyHandler.addObserver(instrumentation, propertyDescriptorPrototype.propertyKey)
+                                proxyHandler.addObserver(instrumentation, propertyKey)
                             }
                         } else {
-                            newValue = ProxyHandler.create(value, instrumentation, propertyDescriptorPrototype.propertyKey)
+                            newValue = ProxyHandler.create(value, instrumentation, propertyKey)
                         }
                     }
 
                     this.instrumentation.notify(
-                        newValue, oldValue, 'set', [propertyDescriptorPrototype.propertyKey],
+                        newValue, oldValue, 'set', [propertyKey],
                         [(value) => {
                             if (oldValue && oldValue.isProxy) {
                                 oldValue.proxyHandler.removeObserver(instrumentation)
@@ -354,6 +310,19 @@ export class Instrumentation {
         } else {
             return ['none', null]
         }
+    }
+
+    instrumentOwn(
+        propertyKey: string,
+        descriptor: PropertyDescriptor
+    ): PropertyCallTypeDetail {
+        if (this.ownInstrumented === null) {
+            this.ownInstrumented = new Map()
+        }
+
+        const result = this.instrument(this.owner, propertyKey, descriptor)
+        this.ownInstrumented.set(propertyKey, result)
+        return result
     }
 
     bindOut(key: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: string, active?: boolean): Binder {
@@ -413,18 +382,6 @@ export class Instrumentation {
             this.addDeepBy(binder)
 
             switch (producerPropertyCallTypeDetail[0]) {
-                case 'ownSetter': {
-                    const descriptor = producerPropertyCallTypeDetail[1]
-                    const value = descriptor.get()
-
-                    if (value.isProxy) {
-                        if (value.observer !== this) {
-                            value.addObserver(this, producerPropertyKey)
-                        }
-                    } else {
-                        descriptor.set(ProxyHandler.create(value, this, producerPropertyKey))
-                    }
-                } break
                 case 'setter': {
                     const descriptor = producerPropertyCallTypeDetail[1]
                     const value = descriptor.get.call(this.owner)
