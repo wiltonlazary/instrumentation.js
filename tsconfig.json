@@ -1,0 +1,34 @@
+{
+    "compilerOptions": {
+        "outDir": "dist",
+        "baseUrl": "src",
+        "rootDir": "src",
+        "allowSyntheticDefaultImports": true,
+        "declaration": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "strictFunctionTypes": false,
+        "noStrictGenericChecks": true,
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "target": "es2015",
+        "jsx": "react",
+        "suppressImplicitAnyIndexErrors": true,
+        "lib": [
+            "es6",
+            "dom"
+        ]
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+    ],
+    "exclude": [
+        ".vscode",
+        "bin",
+        "dist",
+        "node_modules"
+    ],
+    "compileOnSave": false
+}
