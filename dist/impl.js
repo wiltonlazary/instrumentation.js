@@ -47,8 +47,8 @@ Object.prototype['dispose'] = function () {
         this.__instrumentation = undefined;
     }
 };
-Object.prototype['bind'] = function (key, consumer, consumerPropertyKey, active) {
-    return this.instrumentation.bindOut(key, consumer, consumerPropertyKey, active);
+Object.prototype['bind'] = function (expression, consumer, consumerPropertyKey, active) {
+    return this.instrumentation.bindOut(expression, consumer, consumerPropertyKey, active);
 };
 Object.prototype['bindOut'] = function (params) {
     params.forEach(element => {

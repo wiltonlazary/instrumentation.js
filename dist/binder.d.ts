@@ -12,7 +12,7 @@ export interface BinderDispatchDetail {
     };
 }
 export declare type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any;
-export declare type DispatchOperation = 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift' | 'clear';
+export declare type DispatchOperation = 'init' | 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift' | 'clear';
 export declare type DispatchMatch = '<' | '=' | '>';
 export declare function currentBinderDispatchDetail(): any;
 export declare function bypassBinderDispatch(): void;

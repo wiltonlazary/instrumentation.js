@@ -290,20 +290,26 @@ class Instrumentation {
         this.ownInstrumented.set(propertyKey, result);
         return result;
     }
-    bindOut(key, consumer, consumerPropertyKey, active) {
+    bindOut(expression, consumer, consumerPropertyKey, active) {
         if (this.outBinders === null) {
             this.outBinders = new Map();
         }
-        let producerPropertyKey = key;
-        let producerPropertyKeyPath = key;
+        let init = false;
+        let expr = expression;
+        if (expr.startsWith('+')) {
+            init = true;
+            expr = expr.substr(1);
+        }
+        let producerPropertyKey = expr;
+        let producerPropertyKeyPath = expr;
         let producerPropertyKeyPathRegExp = null;
         let deep = false;
-        if (key.indexOf('/') >= 0) {
+        if (expr.indexOf('/') >= 0) {
             deep = true;
-            const indexOfSep = key.indexOf('/');
-            producerPropertyKeyPath = key.substring(0, indexOfSep);
+            const indexOfSep = expr.indexOf('/');
+            producerPropertyKeyPath = expr.substring(0, indexOfSep);
             producerPropertyKey = producerPropertyKeyPath;
-            const regExpStr = key.substr(indexOfSep + 1);
+            const regExpStr = expr.substr(indexOfSep + 1);
             const indexOfSecSep = regExpStr.indexOf('/');
             if (indexOfSecSep >= 0) {
                 producerPropertyKeyPathRegExp = new RegExp(regExpStr.substring(0, indexOfSecSep), regExpStr.substr(indexOfSep + 1));
@@ -361,6 +367,9 @@ class Instrumentation {
                     }
                     break;
             }
+        }
+        if (init) {
+            binder.dispatch(this.owner[producerPropertyKey], undefined, 'init', [producerPropertyKey], binder.producerPropertyPath.length === 1 ? '=' : '<');
         }
         return binder;
     }

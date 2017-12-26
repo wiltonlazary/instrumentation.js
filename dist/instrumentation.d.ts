@@ -34,7 +34,7 @@ export declare class Instrumentation {
     ensureIntrumentation(propertyKey: string, instrumentPrototype?: boolean): PropertyCallTypeDetail;
     instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
     instrumentOwn(propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
-    bindOut(key: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: string, active?: boolean): Binder;
+    bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: string, active?: boolean): Binder;
     bindIn(binder: Binder): Binder;
     unbindOut(binder: Binder): void;
     unbindIn(binder: Binder): void;
