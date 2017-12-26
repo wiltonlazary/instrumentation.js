@@ -21,3 +21,8 @@ export declare class ArrayProxyHandler<T extends object> extends ObjectProxyHand
     readonly handlers: any;
     get(target: T, p: PropertyKey, receiver: any): any;
 }
+export declare class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+    _handlers: any;
+    readonly handlers: any;
+    get(target: T, p: PropertyKey, receiver: any): any;
+}

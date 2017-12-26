@@ -2,7 +2,7 @@ import { Binder, BinderDispatchDetail, DispatchOperation } from './binder';
 export declare const ABORT_ACTION: {
     toString: () => string;
 };
-export declare type PropertyCallType = 'none' | 'function' | 'setter';
+export declare type PropertyCallType = 'none' | 'function' | 'setter' | 'writable';
 export declare type PropertyCallTypeDetail = [PropertyCallType, any];
 export declare type BindOutParamsType = Array<[string, (value: any, detai: BinderDispatchDetail) => any] | [string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [string, any, string] | [string, any, string, boolean]>;
 export declare type BindInParamsType = Array<[any, string, (value: any, detai: BinderDispatchDetail) => any] | [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [any, string, string] | [any, string, string, boolean]>;

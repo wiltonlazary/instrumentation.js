@@ -2,7 +2,7 @@ import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType } f
 import { ObjectProxyHandler } from './proxy_handler'
 
 export const ABORT_ACTION = { toString: () => 'ABORT_ACTION' }
-export type PropertyCallType = 'none' | 'function' | 'setter'
+export type PropertyCallType = 'none' | 'function' | 'setter' | 'writable'
 export type PropertyCallTypeDetail = [PropertyCallType, any]
 
 const prototypeInstrumented = new Map<any, Map<any, PropertyCallTypeDetail>>()
@@ -274,7 +274,45 @@ export class Instrumentation {
     }
 
     instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail {
-        if (typeof descriptor.value === 'function') {
+        if (descriptor.writable) {
+            const originalDescriptor = descriptor
+
+            Object.defineProperty(target, propertyKey, {
+                get: function () { return originalDescriptor.value },
+                set: function (value) {
+                    const instrumentation = this.instrumentation
+                    let oldValue = originalDescriptor.value
+                    let newValue = value
+
+                    if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
+                        if (value.isProxy) {
+                            const ObjectProxyHandler = value.proxyHandler
+
+                            if (ObjectProxyHandler.observer !== instrumentation) {
+                                ObjectProxyHandler.addObserver(instrumentation, propertyKey)
+                            }
+                        } else {
+                            newValue = ObjectProxyHandler.create(value, instrumentation, propertyKey)
+                        }
+                    }
+
+                    this.instrumentation.notify(
+                        newValue, oldValue, 'set', [propertyKey],
+                        [(value) => {
+                            if (oldValue && oldValue.isProxy) {
+                                oldValue.proxyHandler.removeObserver(instrumentation)
+                            }
+
+                            originalDescriptor.value = value
+                        }, this]
+                    )
+                },
+                enumerable: originalDescriptor.enumerable,
+                configurable: originalDescriptor.configurable
+            })
+
+            return ['writable', originalDescriptor]
+        } else if (typeof descriptor.value === 'function') {
             const originalMethod = descriptor.value
             delete target[propertyKey]
 
@@ -412,6 +450,20 @@ export class Instrumentation {
                         }
                     } else {
                         descriptor.set.call(this.owner, ObjectProxyHandler.create(value, this, producerPropertyKey))
+                    }
+                } break
+                case 'writable': {
+                    const descriptor = producerPropertyCallTypeDetail[1]
+                    const value = descriptor.value
+
+                    if (value.isProxy) {
+                        const ObjectProxyHandler = value.proxyHandler
+
+                        if (ObjectProxyHandler.observer !== this) {
+                            ObjectProxyHandler.addObserver(this, producerPropertyKey)
+                        }
+                    } else {
+                        descriptor.value = ObjectProxyHandler.create(value, this, producerPropertyKey)
                     }
                 } break
             }

@@ -18,6 +18,8 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
 
         if (Array.isArray(backing)) {
             proxyHandler = new ArrayProxyHandler(backing, observer, propertyKey)
+        } if (backing instanceof Map) {
+            proxyHandler = new MapProxyHandler(backing, observer, propertyKey)
         } else {
             proxyHandler = new ObjectProxyHandler(backing, observer, propertyKey)
         }
@@ -173,6 +175,63 @@ export class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
                     return this.handlers.shift
                 case 'unshift':
                     return this.handlers.unshift
+                default:
+                    return super.get(target, p, receiver)
+            }
+        } else {
+            return super.get(target, p, receiver)
+        }
+    }
+}
+
+export class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+    _handlers = null
+
+    get handlers(): any {
+        const self = this
+
+        if (this._handlers === null) {
+            this._handlers = {
+                get: (key): any => {
+                    let value = self.backing.get(key)
+
+                    if (!(value instanceof Object) || value.isProxy || value.isProxyHandler) {
+                        return value
+                    } else {
+                        value = ObjectProxyHandler.create(value, self, key)
+                        self.backing.set(key, value)
+                        return value
+                    }
+                },
+                set: (key, value): any => {
+                    const oldValue = self.backing.get(key)
+                    const res = self.backing.set(key, value)
+                    self.notify(value, oldValue, 'set', [key])
+                    return res
+                },
+                delete: (key): any => {
+                    const oldValue = self.backing.get(key)
+                    const res = self.backing.delete(key)
+                    this.notify(undefined, oldValue, 'delete', [key])
+                    return res
+                }
+            }
+        }
+
+        return this._handlers
+    }
+
+    get(target: T, p: PropertyKey, receiver: any): any {
+        let value = this.backing[p]
+
+        if (typeof value === 'function') {
+            switch (p) {
+                case 'get':
+                    return this.handlers.get
+                case 'set':
+                    return this.handlers.set
+                case 'delete':
+                    return this.handlers.delete
                 default:
                     return super.get(target, p, receiver)
             }

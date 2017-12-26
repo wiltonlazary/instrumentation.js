@@ -23,6 +23,9 @@ class ObjectProxyHandler {
         if (Array.isArray(backing)) {
             proxyHandler = new ArrayProxyHandler(backing, observer, propertyKey);
         }
+        if (backing instanceof Map) {
+            proxyHandler = new MapProxyHandler(backing, observer, propertyKey);
+        }
         else {
             proxyHandler = new ObjectProxyHandler(backing, observer, propertyKey);
         }
@@ -174,6 +177,62 @@ class ArrayProxyHandler extends ObjectProxyHandler {
     }
 }
 exports.ArrayProxyHandler = ArrayProxyHandler;
+class MapProxyHandler extends ObjectProxyHandler {
+    constructor() {
+        super(...arguments);
+        this._handlers = null;
+    }
+    get handlers() {
+        const self = this;
+        if (this._handlers === null) {
+            this._handlers = {
+                get: (key) => {
+                    let value = self.backing.get(key);
+                    if (!(value instanceof Object) || value.isProxy || value.isProxyHandler) {
+                        return value;
+                    }
+                    else {
+                        value = ObjectProxyHandler.create(value, self, key);
+                        self.backing.set(key, value);
+                        return value;
+                    }
+                },
+                set: (key, value) => {
+                    const oldValue = self.backing.get(key);
+                    const res = self.backing.set(key, value);
+                    self.notify(value, oldValue, 'set', [key]);
+                    return res;
+                },
+                delete: (key) => {
+                    const oldValue = self.backing.get(key);
+                    const res = self.backing.delete(key);
+                    this.notify(undefined, oldValue, 'delete', [key]);
+                    return res;
+                }
+            };
+        }
+        return this._handlers;
+    }
+    get(target, p, receiver) {
+        let value = this.backing[p];
+        if (typeof value === 'function') {
+            switch (p) {
+                case 'get':
+                    return this.handlers.get;
+                case 'set':
+                    return this.handlers.set;
+                case 'delete':
+                    return this.handlers.delete;
+                default:
+                    return super.get(target, p, receiver);
+            }
+        }
+        else {
+            return super.get(target, p, receiver);
+        }
+    }
+}
+exports.MapProxyHandler = MapProxyHandler;
 global.ObjectProxyHandler = ObjectProxyHandler;
 
 //# sourceMappingURL=proxy_handler.js.map

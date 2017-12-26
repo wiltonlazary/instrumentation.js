@@ -207,7 +207,38 @@ class Instrumentation {
         return result;
     }
     instrument(target, propertyKey, descriptor) {
-        if (typeof descriptor.value === 'function') {
+        if (descriptor.writable) {
+            const originalDescriptor = descriptor;
+            Object.defineProperty(target, propertyKey, {
+                get: function () { return originalDescriptor.value; },
+                set: function (value) {
+                    const instrumentation = this.instrumentation;
+                    let oldValue = originalDescriptor.value;
+                    let newValue = value;
+                    if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
+                        if (value.isProxy) {
+                            const ObjectProxyHandler = value.proxyHandler;
+                            if (ObjectProxyHandler.observer !== instrumentation) {
+                                ObjectProxyHandler.addObserver(instrumentation, propertyKey);
+                            }
+                        }
+                        else {
+                            newValue = proxy_handler_1.ObjectProxyHandler.create(value, instrumentation, propertyKey);
+                        }
+                    }
+                    this.instrumentation.notify(newValue, oldValue, 'set', [propertyKey], [(value) => {
+                            if (oldValue && oldValue.isProxy) {
+                                oldValue.proxyHandler.removeObserver(instrumentation);
+                            }
+                            originalDescriptor.value = value;
+                        }, this]);
+                },
+                enumerable: originalDescriptor.enumerable,
+                configurable: originalDescriptor.configurable
+            });
+            return ['writable', originalDescriptor];
+        }
+        else if (typeof descriptor.value === 'function') {
             const originalMethod = descriptor.value;
             delete target[propertyKey];
             target[propertyKey] = function () {
@@ -311,6 +342,21 @@ class Instrumentation {
                         }
                         else {
                             descriptor.set.call(this.owner, proxy_handler_1.ObjectProxyHandler.create(value, this, producerPropertyKey));
+                        }
+                    }
+                    break;
+                case 'writable':
+                    {
+                        const descriptor = producerPropertyCallTypeDetail[1];
+                        const value = descriptor.value;
+                        if (value.isProxy) {
+                            const ObjectProxyHandler = value.proxyHandler;
+                            if (ObjectProxyHandler.observer !== this) {
+                                ObjectProxyHandler.addObserver(this, producerPropertyKey);
+                            }
+                        }
+                        else {
+                            descriptor.value = proxy_handler_1.ObjectProxyHandler.create(value, this, producerPropertyKey);
                         }
                     }
                     break;
