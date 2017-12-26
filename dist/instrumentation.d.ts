@@ -13,14 +13,14 @@ export interface PropertyDescriptorPrototype {
     descriptor: PropertyDescriptor;
     prototype: any;
 }
-export declare function pathContains(path: Array<string>, contained: Array<string>): boolean;
+export declare function pathContains(path: Array<any>, contained: Array<any>): boolean;
 export declare function getHeadPrototype(prototype: any): any;
 export declare function getHeadPrototypeFromInstance(instance: any): any;
-export declare function getPropertyDescriptorPrototype(prototype: any, propertyKey: string): PropertyDescriptorPrototype;
-export declare function getPropertyDescriptorPrototypeFromInstance(instance: any, propertyKey: string): PropertyDescriptorPrototype;
-export declare function getPropertyCallTypeFromPrototype(prototype: any, propertyKey: string): PropertyCallTypeDetail;
-export declare function getPropertyCallTypeFromPrototypeFromInstance(instance: any, propertyKey: string): PropertyCallTypeDetail;
-export declare function valueFromPath(object: any, templatePlate: Array<string>, path: Array<string>): any;
+export declare function getPropertyDescriptorPrototype(prototype: any, propertyKey: PropertyKey): PropertyDescriptorPrototype;
+export declare function getPropertyDescriptorPrototypeFromInstance(instance: any, propertyKey: PropertyKey): PropertyDescriptorPrototype;
+export declare function getPropertyCallTypeFromPrototype(prototype: any, propertyKey: PropertyKey): PropertyCallTypeDetail;
+export declare function getPropertyCallTypeFromPrototypeFromInstance(instance: any, propertyKey: PropertyKey): PropertyCallTypeDetail;
+export declare function valueFromPath(object: any, templatePlate: Array<any>, path: Array<any>): any;
 export declare class Instrumentation extends Object {
     readonly owner: any;
     deepBy: Map<any, Set<Binder>>;
@@ -35,7 +35,7 @@ export declare class Instrumentation extends Object {
     unregisterObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any): void;
     addDeepBy(binder: Binder): void;
     removeDeepBy(binder: Binder): void;
-    ensureIntrumentation(propertyKey: any, instrumentPrototype?: boolean): PropertyCallTypeDetail;
+    ensureIntrumentation(propertyKey: PropertyKey, instrumentPrototype?: boolean): PropertyCallTypeDetail;
     instrument(target: any, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
     instrumentOwn(propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
     bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: any, active?: boolean): Binder;

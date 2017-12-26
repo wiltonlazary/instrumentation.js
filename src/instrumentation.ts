@@ -30,7 +30,7 @@ export interface PropertyDescriptorPrototype {
     prototype: any
 }
 
-export function pathContains(path: Array<string>, contained: Array<string>): boolean {
+export function pathContains(path: Array<any>, contained: Array<any>): boolean {
     if (contained.length > path.length) {
         return false
     } else {
@@ -62,7 +62,7 @@ export function getHeadPrototypeFromInstance(instance: any): any {
     return getHeadPrototype(instance.constructor.prototype)
 }
 
-export function getPropertyDescriptorPrototype(prototype: any, propertyKey: string): PropertyDescriptorPrototype {
+export function getPropertyDescriptorPrototype(prototype: any, propertyKey: PropertyKey): PropertyDescriptorPrototype {
     let nextPrototype = prototype
     let descriptor: any = null
 
@@ -80,11 +80,11 @@ export function getPropertyDescriptorPrototype(prototype: any, propertyKey: stri
     }
 }
 
-export function getPropertyDescriptorPrototypeFromInstance(instance: any, propertyKey: string): PropertyDescriptorPrototype {
+export function getPropertyDescriptorPrototypeFromInstance(instance: any, propertyKey: PropertyKey): PropertyDescriptorPrototype {
     return getPropertyDescriptorPrototype(instance.constructor.prototype, propertyKey)
 }
 
-export function getPropertyCallTypeFromPrototype(prototype, propertyKey: string): PropertyCallTypeDetail {
+export function getPropertyCallTypeFromPrototype(prototype, propertyKey: PropertyKey): PropertyCallTypeDetail {
     let result: PropertyCallTypeDetail = ['none', null]
 
     if (!propertyCallTypeFromPrototypeCache.has(prototype) || !propertyCallTypeFromPrototypeCache.get(prototype).has(propertyKey)) {
@@ -110,11 +110,11 @@ export function getPropertyCallTypeFromPrototype(prototype, propertyKey: string)
     return result
 }
 
-export function getPropertyCallTypeFromPrototypeFromInstance(instance, propertyKey: string): PropertyCallTypeDetail {
+export function getPropertyCallTypeFromPrototypeFromInstance(instance, propertyKey: PropertyKey): PropertyCallTypeDetail {
     return getPropertyCallTypeFromPrototype(instance.constructor.prototype, propertyKey)
 }
 
-export function valueFromPath(object, templatePlate: Array<string>, path: Array<string>): any {
+export function valueFromPath(object, templatePlate: Array<any>, path: Array<any>): any {
     if (object instanceof Object) {
         let current = object
 
@@ -233,7 +233,7 @@ export class Instrumentation extends Object {
         }
     }
 
-    ensureIntrumentation(propertyKey: any, instrumentPrototype: boolean = false): PropertyCallTypeDetail {
+    ensureIntrumentation(propertyKey: PropertyKey, instrumentPrototype: boolean = false): PropertyCallTypeDetail {
         const ownerPrototype = this.owner.constructor.prototype
         let result: PropertyCallTypeDetail = ['none', null]
 

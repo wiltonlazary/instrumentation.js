@@ -28,6 +28,7 @@ export class ObjectProxyHandler<T extends object> extends Object implements Prox
         }
 
         const value = new Proxy(backing, proxyHandler)
+        proxyHandler.proxyInstance = value
         Object.defineProperty(value, 'isProxy', booleanTruePropertyDefinition)
 
         Object.defineProperty(value, 'proxyHandler', {
@@ -35,8 +36,7 @@ export class ObjectProxyHandler<T extends object> extends Object implements Prox
             enumerable: false,
             configurable: false
         })
-
-        proxyHandler.proxyInstance = value
+      
         return value
     }
 
