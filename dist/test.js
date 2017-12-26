@@ -7,8 +7,9 @@ class Person {
         this.age = 40;
     }
 }
-class Test {
+class Test extends Object {
     constructor() {
+        super();
         this.arr1 = [{ a1: 'aa22' }];
         this.map1 = new Map();
         this._obj1 = { p1: 'z1z1', name: '--- wilton lazary ---' };
@@ -24,6 +25,9 @@ class Test {
     }
     fire(value) {
         console.log(`fire: value=${JSON.stringify(value)}`);
+    }
+    dispose() {
+        super['dispose']();
     }
 }
 const test = new Test();
@@ -80,5 +84,8 @@ test.obj1.name = 'new name';
 test.obj1.data = { count: 1, content: '---' };
 test.obj1.data.content = { type: 'new_content' };
 //------------------------------------//
+// Clelanup
+test.dispose();
+//------------------------------------// 
 
 //# sourceMappingURL=test.js.map

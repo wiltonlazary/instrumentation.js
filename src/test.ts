@@ -6,10 +6,12 @@ class Person {
     data: any
 }
 
-class Test {
+class Test extends Object {
     arr1: any = [{ a1: 'aa22' }]
     map1 = new Map()
-    _obj1: any =  { p1: 'z1z1', name: '--- wilton lazary ---' } 
+    _obj1: any = { p1: 'z1z1', name: '--- wilton lazary ---' }
+
+    constructor() { super() }
 
     get obj1() {
         return this._obj1
@@ -25,6 +27,10 @@ class Test {
 
     fire(value) {
         console.log(`fire: value=${JSON.stringify(value)}`)
+    }
+
+    dispose() {
+        super['dispose']()
     }
 }
 
@@ -60,7 +66,7 @@ test.fire('function binding test')
 
 // Array deep data binding tests
 test.arr1.push('xxx-xxx')
-test.arr1.push({z:1})
+test.arr1.push({ z: 1 })
 test.arr1[0].name1 = 'xx'
 test.arr1.length = 0
 //------------------------------------//
@@ -72,7 +78,7 @@ test.map1.set('data1', {})
 test.map1.forEach((value, key) => {
     console.log(`key:${key} value:${value}`)
 
-    if(value instanceof Object){
+    if (value instanceof Object) {
         value.bzbz = 4
     }
 })
@@ -90,4 +96,8 @@ test.obj1 = new Person()
 test.obj1.name = 'new name'
 test.obj1.data = { count: 1, content: '---' }
 test.obj1.data.content = { type: 'new_content' }
+//------------------------------------//
+
+// Clelanup
+test.dispose()
 //------------------------------------//

@@ -10,6 +10,7 @@ export declare class ObjectProxyHandler<T extends object> extends Object impleme
     static create(backing: any, observer?: any, propertyKey?: any): any;
     constructor(backing: any, observer: any, propertyKey: any);
     readonly isProxyHandler: boolean;
+    clear(): void;
     dispose(): void;
     addObserver(observer: any, propertyKey: any): void;
     removeObserver(observer: any): void;

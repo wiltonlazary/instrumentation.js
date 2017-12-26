@@ -155,7 +155,7 @@ export class Instrumentation extends Object {
 
     clear() {
         if (this.observedProxyHandlers !== null) {
-            for (const proxyHandler of this.observedProxyHandlers.values()) {
+            for (const proxyHandler of this.observedProxyHandlers.keys()) {
                 proxyHandler.removeObserver(this)
             }
         }

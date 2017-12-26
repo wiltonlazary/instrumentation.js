@@ -46,7 +46,18 @@ class ObjectProxyHandler extends Object {
     get isProxyHandler() {
         return true;
     }
+    clear() {
+        if (this.observerIsMap) {
+            this.observer.forEach(element => {
+                this.removeObserver(element);
+            });
+        }
+        else if (this.observer !== null) {
+            this.removeObserver(this.observer);
+        }
+    }
     dispose() {
+        this.clear();
         super['dispose']();
     }
     addObserver(observer, propertyKey) {
@@ -235,12 +246,8 @@ class ArrayProxyHandler extends ObjectProxyHandler {
                     }
                 }
             }
-            this.backing.length = value;
-            return true;
         }
-        else {
-            return super.set(target, p, value, receiver);
-        }
+        return super.set(target, p, value, receiver);
     }
 }
 exports.ArrayProxyHandler = ArrayProxyHandler;
@@ -331,7 +338,7 @@ class MapProxyHandler extends ObjectProxyHandler {
             this._handlers = {
                 get: (key) => {
                     let value = self.backing.get(key);
-                    if (!(value instanceof Object) || value.isProxy || value.isProxyHandler) {
+                    if (!(value instanceof Object) || value.isProxy) {
                         return value;
                     }
                     else {
@@ -342,12 +349,21 @@ class MapProxyHandler extends ObjectProxyHandler {
                 },
                 set: (key, value) => {
                     const oldValue = self.backing.get(key);
+                    if (oldValue instanceof Object && oldValue.isProxy) {
+                        oldValue.proxyHandler.removeObserver(this);
+                    }
+                    if (value instanceof Object && value.isProxy) {
+                        value.proxyHandler.addObserver(this);
+                    }
                     const res = self.backing.set(key, value);
                     self.notify(value, oldValue, 'set', [key]);
                     return res;
                 },
                 delete: (key) => {
                     const oldValue = self.backing.get(key);
+                    if (oldValue instanceof Object && oldValue.isProxy) {
+                        oldValue.proxyHandler.removeObserver(this);
+                    }
                     const res = self.backing.delete(key);
                     this.notify(undefined, oldValue, 'delete', [key]);
                     return res;
@@ -361,7 +377,14 @@ class MapProxyHandler extends ObjectProxyHandler {
                 clear: () => {
                     const oldValue = [];
                     for (const el of self.backing.entries()) {
-                        oldValue.push([el[0], el[1] instanceof Object && el[1].isProxy ? el[1].backing : el[1]]);
+                        const value = el[1];
+                        if (value instanceof Object && value.isProxy) {
+                            value.proxyHandler.removeObserver(this);
+                            oldValue.push([el[0], value.backing]);
+                        }
+                        else {
+                            oldValue.push([el[0], value]);
+                        }
                     }
                     const res = self.backing.clear();
                     this.notify(undefined, oldValue, 'clear', ['*']);
