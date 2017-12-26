@@ -1,3 +1,3 @@
 # Instrumentation and deep data binding for all objects
 
-See: test.ts
+See: src/test.ts

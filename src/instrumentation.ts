@@ -142,19 +142,24 @@ export function valueFromPath(object, templatePlate: Array<string>, path: Array<
     }
 }
 
-export class Instrumentation {
+export class Instrumentation extends Object {
     deepBy: Map<string, Set<Binder>> = null
     ownInstrumented: Map<string, PropertyCallTypeDetail> = null
     outBinders: Map<string, Set<Binder>> = null
     inBinders: Map<string, Set<Binder>> = null
+    observedProxyHandlers: Map<ObjectProxyHandler<any>, any> = null
 
-    constructor(
-        public readonly owner: any
-    ) {
-
+    constructor(public readonly owner: any) {
+        super()
     }
 
     clear() {
+        if (this.observedProxyHandlers !== null) {
+            for (const proxyHandler of this.observedProxyHandlers.values()) {
+                proxyHandler.removeObserver(this)
+            }
+        }
+
         if (this.outBinders !== null) {
             for (const element of this.outBinders.values()) {
                 for (const binder of element) {
@@ -178,6 +183,23 @@ export class Instrumentation {
 
     dispose() {
         this.clear()
+        super['dispose']()
+    }
+
+    registerObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any) {
+        if (this.observedProxyHandlers === null) {
+            this.observedProxyHandlers = new Map()
+        }
+
+        this.observedProxyHandlers.set(proxyHandler, propertyKey)
+    }
+
+    unregisterObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any) {
+        this.observedProxyHandlers.delete(proxyHandler)
+
+        if (this.observedProxyHandlers.size === 0) {
+            this.observedProxyHandlers = null
+        }
     }
 
     addDeepBy(binder: Binder) {

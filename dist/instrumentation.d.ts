@@ -1,4 +1,5 @@
 import { Binder, BinderDispatchDetail, DispatchOperation } from './binder';
+import { ObjectProxyHandler } from './proxy_handler';
 export declare const ABORT_ACTION: {
     toString: () => string;
 };
@@ -20,15 +21,18 @@ export declare function getPropertyDescriptorPrototypeFromInstance(instance: any
 export declare function getPropertyCallTypeFromPrototype(prototype: any, propertyKey: string): PropertyCallTypeDetail;
 export declare function getPropertyCallTypeFromPrototypeFromInstance(instance: any, propertyKey: string): PropertyCallTypeDetail;
 export declare function valueFromPath(object: any, templatePlate: Array<string>, path: Array<string>): any;
-export declare class Instrumentation {
+export declare class Instrumentation extends Object {
     readonly owner: any;
     deepBy: Map<string, Set<Binder>>;
     ownInstrumented: Map<string, PropertyCallTypeDetail>;
     outBinders: Map<string, Set<Binder>>;
     inBinders: Map<string, Set<Binder>>;
+    observedProxyHandlers: Map<ObjectProxyHandler<any>, any>;
     constructor(owner: any);
     clear(): void;
     dispose(): void;
+    registerObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any): void;
+    unregisterObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any): void;
     addDeepBy(binder: Binder): void;
     removeDeepBy(binder: Binder): void;
     ensureIntrumentation(propertyKey: string, instrumentPrototype?: boolean): PropertyCallTypeDetail;

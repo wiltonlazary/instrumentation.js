@@ -14,7 +14,7 @@ export interface BinderDispatchDetail {
 }
 
 let _currentBinderDispatchDetail: BinderDispatchDetail = null
-let _bypassBinderDispatch = false
+let _bypassNextBinderDispatch = false
 
 export type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any
 export type DispatchOperation = 'init' | 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift' | 'clear'
@@ -24,8 +24,8 @@ export function currentBinderDispatchDetail(): any {
     return _currentBinderDispatchDetail
 }
 
-export function bypassBinderDispatch() {
-    _bypassBinderDispatch = true
+export function bypassNextBinderDispatch() {
+    _bypassNextBinderDispatch = true
 }
 
 export class Binder {
@@ -62,8 +62,8 @@ export class Binder {
     dispatch(value: any, oldValue: any, operation: DispatchOperation, path: Array<string>, match: DispatchMatch): any {
         let result = undefined
 
-        if (_bypassBinderDispatch) {
-            _bypassBinderDispatch = false
+        if (_bypassNextBinderDispatch) {
+            _bypassNextBinderDispatch = false
         } else {
             let valueLocal = value
             let oldValueLocal = oldValue

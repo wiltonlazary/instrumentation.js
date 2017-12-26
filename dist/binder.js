@@ -2,15 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const instrumentation_1 = require("./instrumentation");
 let _currentBinderDispatchDetail = null;
-let _bypassBinderDispatch = false;
+let _bypassNextBinderDispatch = false;
 function currentBinderDispatchDetail() {
     return _currentBinderDispatchDetail;
 }
 exports.currentBinderDispatchDetail = currentBinderDispatchDetail;
-function bypassBinderDispatch() {
-    _bypassBinderDispatch = true;
+function bypassNextBinderDispatch() {
+    _bypassNextBinderDispatch = true;
 }
-exports.bypassBinderDispatch = bypassBinderDispatch;
+exports.bypassNextBinderDispatch = bypassNextBinderDispatch;
 class Binder {
     constructor(outInstrumentation, producer, producerPropertyKey, producerPropertyPath, producerPropertyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, consumerPropertyCallType, deep, active) {
         this.outInstrumentation = outInstrumentation;
@@ -38,8 +38,8 @@ class Binder {
     }
     dispatch(value, oldValue, operation, path, match) {
         let result = undefined;
-        if (_bypassBinderDispatch) {
-            _bypassBinderDispatch = false;
+        if (_bypassNextBinderDispatch) {
+            _bypassNextBinderDispatch = false;
         }
         else {
             let valueLocal = value;

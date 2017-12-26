@@ -10,14 +10,17 @@ const booleanTruePropertyDefinition = {
     enumerable: false,
     configurable: false
 };
-class ObjectProxyHandler {
+class ObjectProxyHandler extends Object {
     constructor(backing, observer, propertyKey) {
+        super();
         this.backing = backing;
-        this.observer = observer;
-        this.propertyKey = propertyKey;
         this.observerIsMap = false;
         this.proxyInstance = null;
-        this.observerIsMap = observer instanceof Map;
+        this.observer = null;
+        this.propertyKey = null;
+        if (observer) {
+            this.addObserver(observer, propertyKey);
+        }
     }
     static create(backing, observer = null, propertyKey = null) {
         let proxyHandler = null;
@@ -43,46 +46,61 @@ class ObjectProxyHandler {
     get isProxyHandler() {
         return true;
     }
+    dispose() {
+        super['dispose']();
+    }
     addObserver(observer, propertyKey) {
         if (!this.observer) {
             this.observer = observer;
             this.propertyKey = propertyKey;
         }
         else if (this.observerIsMap) {
-            this.observer.set(observer, propertyKey);
+            if (!this.observer.has(observer)) {
+                this.observer.set(observer, propertyKey);
+                observer.registerObserved(this, propertyKey);
+            }
         }
         else if (this.observer !== observer) {
             this.observer = new Map();
             this.observer.set(this.observer, this.propertyKey);
             this.observerIsMap = true;
             this.propertyKey = null;
+            this.observer.set(observer, propertyKey);
+            observer.registerObserved(this, propertyKey);
         }
     }
     removeObserver(observer) {
         if (this.observerIsMap) {
-            this.observer.delete(observer);
-            if (this.observer.size === 1) {
-                this.observerIsMap = false;
+            const observedPropertyKey = this.observer.get(observer);
+            if (observedPropertyKey !== undefined) {
                 const map = this.observer;
-                this.observer.forEach((propertyKey, element) => {
-                    this.observer = element;
-                    this.propertyKey = propertyKey;
-                });
-                map.clear();
-            }
-            else if (this.observer.size === 0) {
-                this.observerIsMap = false;
-                this.observer = null;
-                this.propertyKey = null;
+                map.delete(observer);
+                observer.unregisterObserved(this, observedPropertyKey);
+                if (map.size === 1) {
+                    map.forEach((propertyKey, element) => {
+                        this.observer = element;
+                        this.propertyKey = propertyKey;
+                        this.observerIsMap = false;
+                    });
+                    map.clear();
+                }
             }
         }
         else if (this.observer === observer) {
+            const observedPropertyKey = this.propertyKey;
             this.observer = null;
             this.propertyKey = null;
+            observer.unregisterObserved(this, observedPropertyKey);
         }
     }
+    registerObserved(proxyHandler, propertyKey) {
+        //Silent
+    }
+    unregisterObserved(proxyHandler, propertyKey) {
+        //Silent
+    }
     notify(value, oldValue, operation, path) {
-        if (!!this.observer) {
+        if (this.observer) {
             if (this.observerIsMap) {
                 this.observer.forEach((propertyKey, element) => {
                     path.unshift(propertyKey);

@@ -1,4 +1,5 @@
-import { BinderConsumerType, Binder, currentBinderDispatchDetail, bypassBinderDispatch } from './binder'
+import { ObjectProxyHandler } from './proxy_handler';
+import { BinderConsumerType, Binder, currentBinderDispatchDetail, bypassNextBinderDispatch } from './binder'
 
 import {
     BindInParamsType, BindOutParamsType, getHeadPrototype, getHeadPrototypeFromInstance,
@@ -15,7 +16,7 @@ if (!global) {
     }
 }
 
-global.bypassBinderDispatch = bypassBinderDispatch
+global.bypassNextBinderDispatch = bypassNextBinderDispatch
 global.currentBinderDispatchDetail = currentBinderDispatchDetail
 global.getHeadPrototype = getHeadPrototype
 global.getHeadPrototypeFromInstance = getHeadPrototypeFromInstance
@@ -51,6 +52,10 @@ if (Object.getOwnPropertyDescriptor(Object.prototype, 'instrumentation') === und
 }
 
 Object.prototype['dispose'] = function () {
+    if (this.isProxy) {
+        this.proxyHandler.dispose()
+    }
+
     if (this.__instrumentation !== undefined) {
         this.__instrumentation.dispose()
         this.__instrumentation = undefined
@@ -101,4 +106,12 @@ Object.prototype['bindIn'] = function (params: BindInParamsType) {
             element[0].bind(element[1], this, element[2])
         }
     })
+}
+
+Object.prototype['toProxy'] = function (): any {
+    if (this.isProxy) {
+        return this
+    } else {
+        return ObjectProxyHandler.create(this)
+    }
 }

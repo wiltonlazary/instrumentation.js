@@ -15,7 +15,7 @@ export declare type BinderConsumerType = (value: any, detai: BinderDispatchDetai
 export declare type DispatchOperation = 'init' | 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift' | 'clear';
 export declare type DispatchMatch = '<' | '=' | '>';
 export declare function currentBinderDispatchDetail(): any;
-export declare function bypassBinderDispatch(): void;
+export declare function bypassNextBinderDispatch(): void;
 export declare class Binder {
     readonly outInstrumentation: Instrumentation;
     readonly producer: any;

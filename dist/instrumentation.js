@@ -103,15 +103,22 @@ function valueFromPath(object, templatePlate, path) {
     }
 }
 exports.valueFromPath = valueFromPath;
-class Instrumentation {
+class Instrumentation extends Object {
     constructor(owner) {
+        super();
         this.owner = owner;
         this.deepBy = null;
         this.ownInstrumented = null;
         this.outBinders = null;
         this.inBinders = null;
+        this.observedProxyHandlers = null;
     }
     clear() {
+        if (this.observedProxyHandlers !== null) {
+            for (const proxyHandler of this.observedProxyHandlers.values()) {
+                proxyHandler.removeObserver(this);
+            }
+        }
         if (this.outBinders !== null) {
             for (const element of this.outBinders.values()) {
                 for (const binder of element) {
@@ -131,6 +138,19 @@ class Instrumentation {
     }
     dispose() {
         this.clear();
+        super['dispose']();
+    }
+    registerObserved(proxyHandler, propertyKey) {
+        if (this.observedProxyHandlers === null) {
+            this.observedProxyHandlers = new Map();
+        }
+        this.observedProxyHandlers.set(proxyHandler, propertyKey);
+    }
+    unregisterObserved(proxyHandler, propertyKey) {
+        this.observedProxyHandlers.delete(proxyHandler);
+        if (this.observedProxyHandlers.size === 0) {
+            this.observedProxyHandlers = null;
+        }
     }
     addDeepBy(binder) {
         if (!this.deepBy) {

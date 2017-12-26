@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const proxy_handler_1 = require("./proxy_handler");
 const binder_1 = require("./binder");
 const instrumentation_1 = require("./instrumentation");
 if (!global) {
@@ -10,7 +11,7 @@ if (!global) {
         window['global'] = window;
     }
 }
-global.bypassBinderDispatch = binder_1.bypassBinderDispatch;
+global.bypassNextBinderDispatch = binder_1.bypassNextBinderDispatch;
 global.currentBinderDispatchDetail = binder_1.currentBinderDispatchDetail;
 global.getHeadPrototype = instrumentation_1.getHeadPrototype;
 global.getHeadPrototypeFromInstance = instrumentation_1.getHeadPrototypeFromInstance;
@@ -42,6 +43,9 @@ if (Object.getOwnPropertyDescriptor(Object.prototype, 'instrumentation') === und
     });
 }
 Object.prototype['dispose'] = function () {
+    if (this.isProxy) {
+        this.proxyHandler.dispose();
+    }
     if (this.__instrumentation !== undefined) {
         this.__instrumentation.dispose();
         this.__instrumentation = undefined;
@@ -95,6 +99,14 @@ Object.prototype['bindIn'] = function (params) {
             element[0].bind(element[1], this, element[2]);
         }
     });
+};
+Object.prototype['toProxy'] = function () {
+    if (this.isProxy) {
+        return this;
+    }
+    else {
+        return proxy_handler_1.ObjectProxyHandler.create(this);
+    }
 };
 
 //# sourceMappingURL=impl.js.map

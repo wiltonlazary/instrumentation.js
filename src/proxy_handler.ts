@@ -10,11 +10,13 @@ const booleanTruePropertyDefinition: PropertyDescriptor = {
     configurable: false
 }
 
-export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
+export class ObjectProxyHandler<T extends object> extends Object implements ProxyHandler<T> {
     observerIsMap = false
     proxyInstance: any = null
+    observer: any = null
+    propertyKey: any = null
 
-    static create(backing: any, observer: any = null, propertyKey: PropertyKey = null): any {
+    static create(backing: any, observer: any = null, propertyKey: any = null): any {
         let proxyHandler = null
 
         if (Array.isArray(backing)) {
@@ -38,55 +40,78 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
         return value
     }
 
-    constructor(public readonly backing: any, public observer: any, public propertyKey: PropertyKey) {
-        this.observerIsMap = observer instanceof Map
+    constructor(public readonly backing: any, observer: any, propertyKey: any) {
+        super()
+
+        if (observer) {
+            this.addObserver(observer, propertyKey)
+        }
     }
 
     get isProxyHandler(): boolean {
         return true
     }
 
-    addObserver(observer: any, propertyKey: PropertyKey) {
+    dispose() {
+        super['dispose']()
+    }
+
+    addObserver(observer: any, propertyKey: any) {
         if (!this.observer) {
             this.observer = observer
             this.propertyKey = propertyKey
         } else if (this.observerIsMap) {
-            this.observer.set(observer, propertyKey)
+            if (!this.observer.has(observer)) {
+                this.observer.set(observer, propertyKey)
+                observer.registerObserved(this, propertyKey)
+            }
         } else if (this.observer !== observer) {
             this.observer = new Map()
             this.observer.set(this.observer, this.propertyKey)
             this.observerIsMap = true
             this.propertyKey = null
+            this.observer.set(observer, propertyKey)
+            observer.registerObserved(this, propertyKey)
         }
     }
 
     removeObserver(observer: any) {
         if (this.observerIsMap) {
-            this.observer.delete(observer)
+            const observedPropertyKey = this.observer.get(observer)
 
-            if (this.observer.size === 1) {
-                this.observerIsMap = false
+            if (observedPropertyKey !== undefined) {
                 const map = this.observer
+                map.delete(observer)
+                observer.unregisterObserved(this, observedPropertyKey)
 
-                this.observer.forEach((propertyKey, element) => {
-                    this.observer = element
-                    this.propertyKey = propertyKey
-                })
+                if (map.size === 1) {
+                    map.forEach((propertyKey, element) => {
+                        this.observer = element
+                        this.propertyKey = propertyKey
+                        this.observerIsMap = false
+                    })
 
-                map.clear()
-            } else if (this.observer.size === 0) {
-                this.observerIsMap = false
-                this.observer = null
-                this.propertyKey = null
+                    map.clear()
+                }
             }
         } else if (this.observer === observer) {
+            const observedPropertyKey = this.propertyKey
             this.observer = null
             this.propertyKey = null
+            observer.unregisterObserved(this, observedPropertyKey)
         }
     }
 
-    notify(value: any, oldValue: any, operation: string, path: Array<PropertyKey>) {
-        if (!!this.observer) {
+    registerObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any) {
+        //Silent
+    }
+
+    unregisterObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any) {
+        //Silent
+    }
+
+    notify(value: any, oldValue: any, operation: string, path: Array<any>) {
+        if (this.observer) {
             if (this.observerIsMap) {
                 this.observer.forEach((propertyKey, element) => {
                     path.unshift(propertyKey)
@@ -100,7 +125,7 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
         }
     }
 
-    get(target: T, p: PropertyKey, receiver: any): any {
+    get(target: T, p: any, receiver: any): any {
         let value = this.backing[p]
 
         if (!(value instanceof Object) || value.isProxy || value.isProxyHandler) {
@@ -112,14 +137,14 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
         }
     }
 
-    set(target: T, p: PropertyKey, value: any, receiver: any): boolean {
+    set(target: T, p: any, value: any, receiver: any): boolean {
         const oldValue = this.backing[p]
         this.backing[p] = value
         this.notify(value, oldValue, 'set', [p])
         return true
     }
 
-    deleteProperty(target: T, p: PropertyKey): boolean {
+    deleteProperty(target: T, p: any): boolean {
         const oldValue = this.backing[p]
         delete this.backing[p]
         this.notify(undefined, oldValue, 'delete', [p])
@@ -127,7 +152,7 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
     }
 }
 
-export class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+export class ArrayProxyHandler extends ObjectProxyHandler<Array<any>> {
     isArray = true
     _handlers = null
 
@@ -166,7 +191,7 @@ export class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
         return this._handlers
     }
 
-    get(target: T, p: PropertyKey, receiver: any): any {
+    get(target: Array<any>, p: PropertyKey, receiver: any): any {
         let value = this.backing[p]
 
         if (typeof value === 'function') {
@@ -268,7 +293,7 @@ export class MapProxyHandlerValuesIterator implements Iterable<any>{
     }
 }
 
-export class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+export class MapProxyHandler extends ObjectProxyHandler<Map<any, any>> {
     isMap = true
     _handlers = null
 
@@ -328,7 +353,7 @@ export class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
         return this._handlers
     }
 
-    get(target: T, p: PropertyKey, receiver: any): any {
+    get(target: Map<any, any>, p: PropertyKey, receiver: any): any {
         let value = this.backing[p]
 
         if (typeof value === 'function') {
