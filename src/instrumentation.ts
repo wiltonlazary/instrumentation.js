@@ -314,7 +314,7 @@ export class Instrumentation {
                         newValue, oldValue, 'set', [propertyKey],
                         [(value) => {
                             if (oldValue && oldValue.isProxy) {
-                                oldValue.ObjectProxyHandler.removeObserver(instrumentation)
+                                oldValue.proxyHandler.removeObserver(instrumentation)
                             }
 
                             originalDescriptor.set.call(this, value)

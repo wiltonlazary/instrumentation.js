@@ -39,16 +39,16 @@ test.bindIn([
         }]
 ]);
 //TODO: array manipulation tests
-//test.obj1.push('xxx-xxx')
+test.obj1.push('xxx-xxx');
 test.obj1[0].name1 = 'xx';
 // Object deep data binding tests
-/* test.obj1 = { x: { y: { z: 1 } } }
-test.obj1.x.y.z = {}
-test.obj1.x.y = 10
-delete test.obj1.x
-test.obj1 = new Person()
-test.obj1.name = 'new name'
-test.obj1.data = { count: 1, content: '---' }
-test.obj1.data.content = { type: 'new_content' } */
+test.obj1 = { x: { y: { z: 1 } } };
+test.obj1.x.y.z = {};
+test.obj1.x.y = 10;
+delete test.obj1.x;
+test.obj1 = new Person();
+test.obj1.name = 'new name';
+test.obj1.data = { count: 1, content: '---' };
+test.obj1.data.content = { type: 'new_content' };
 
 //# sourceMappingURL=test.js.map
