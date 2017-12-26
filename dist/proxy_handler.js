@@ -52,7 +52,8 @@ class ObjectProxyHandler {
             this.observer.set(observer, propertyKey);
         }
         else if (this.observer !== observer) {
-            this.observer = new Map([this.observer, this.propertyKey]);
+            this.observer = new Map();
+            this.observer.set(this.observer, this.propertyKey);
             this.observerIsMap = true;
             this.propertyKey = null;
         }
@@ -186,27 +187,35 @@ class MapProxyHandlerEntriesIterator {
         this.backing = backing;
         this.observer = observer;
     }
-    next() {
+    [Symbol.iterator]() {
+        return this;
+    }
+    next(value) {
         let entry = this.backing.next();
-        let value = entry.value[1];
-        if (value instanceof Object) {
-            if (value.isProxy) {
-                const proxyHandler = value.proxyHandler;
-                if (proxyHandler.observer !== this.observer) {
-                    proxyHandler.addObserver(this.observer);
+        if (entry.done) {
+            return entry;
+        }
+        else {
+            let valueLocal = entry.value[1];
+            if (valueLocal instanceof Object) {
+                if (valueLocal.isProxy) {
+                    const proxyHandler = valueLocal.proxyHandler;
+                    if (proxyHandler.observer !== this.observer) {
+                        proxyHandler.addObserver(this.observer);
+                    }
+                }
+                else {
+                    const key = entry.value[0];
+                    const newValue = ObjectProxyHandler.create(valueLocal, this.observer, key);
+                    this.backingMap.set(key, newValue);
+                    entry = {
+                        done: entry.done,
+                        value: [key, newValue]
+                    };
                 }
             }
-            else {
-                const key = entry.value[0];
-                const newValue = ObjectProxyHandler.create(value, this.observer, key);
-                this.backingMap.set(key, newValue);
-                entry = {
-                    done: entry.done,
-                    value: [key, newValue]
-                };
-            }
+            return entry;
         }
-        return entry;
     }
 }
 exports.MapProxyHandlerEntriesIterator = MapProxyHandlerEntriesIterator;
@@ -216,26 +225,34 @@ class MapProxyHandlerValuesIterator {
         this.backing = backing;
         this.observer = observer;
     }
-    next() {
+    [Symbol.iterator]() {
+        return this;
+    }
+    next(value) {
         let entry = this.backing.next();
-        const key = entry.value[0];
-        let value = entry.value[1];
-        if (value instanceof Object) {
-            if (value.isProxy) {
-                const proxyHandler = value.proxyHandler;
-                if (proxyHandler.observer !== this.observer) {
-                    proxyHandler.addObserver(this.observer);
+        if (entry.done) {
+            return entry;
+        }
+        else {
+            const key = entry.value[0];
+            let valueLocal = entry.value[1];
+            if (valueLocal instanceof Object) {
+                if (valueLocal.isProxy) {
+                    const proxyHandler = valueLocal.proxyHandler;
+                    if (proxyHandler.observer !== this.observer) {
+                        proxyHandler.addObserver(this.observer);
+                    }
+                }
+                else {
+                    valueLocal = ObjectProxyHandler.create(valueLocal, this.observer, key);
+                    this.backingMap.set(key, valueLocal);
                 }
             }
-            else {
-                value = ObjectProxyHandler.create(value, this.observer, key);
-                this.backingMap.set(key, value);
-            }
+            return {
+                done: entry.done,
+                value: valueLocal
+            };
         }
-        return {
-            done: entry.done,
-            value: value
-        };
     }
 }
 exports.MapProxyHandlerValuesIterator = MapProxyHandlerValuesIterator;
@@ -279,7 +296,10 @@ class MapProxyHandler extends ObjectProxyHandler {
                     return new MapProxyHandlerValuesIterator(self.backing, self.backing.entries(), self);
                 },
                 clear: () => {
-                    const oldValue = self.backing.entries();
+                    const oldValue = [];
+                    for (const el of self.backing.entries()) {
+                        oldValue.push([el[0], el[1] instanceof Object && el[1].isProxy ? el[1].backing : el[1]]);
+                    }
                     const res = self.backing.clear();
                     this.notify(undefined, oldValue, 'clear', ['*']);
                     return res;
@@ -309,6 +329,10 @@ class MapProxyHandler extends ObjectProxyHandler {
                     return this.handlers.values;
                 case 'clear':
                     return this.handlers.clear;
+                case Symbol.iterator:
+                    return this.handlers.entries;
+                case 'forEach':
+                    return this.handlers.forEach;
                 default:
                     return super.get(target, p, receiver);
             }

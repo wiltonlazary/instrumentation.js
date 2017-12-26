@@ -207,7 +207,16 @@ class Instrumentation {
         return result;
     }
     instrument(target, propertyKey, descriptor) {
-        if (descriptor.writable) {
+        if (typeof descriptor.value === 'function') {
+            const originalMethod = descriptor.value;
+            delete target[propertyKey];
+            target[propertyKey] = function () {
+                const value = arguments;
+                this.instrumentation.notify(value, undefined, 'call', [propertyKey], [(value) => { return originalMethod.apply(this, value); }, this]);
+            };
+            return ['function', originalMethod];
+        }
+        else if (descriptor.writable) {
             const originalDescriptor = descriptor;
             Object.defineProperty(target, propertyKey, {
                 get: function () { return originalDescriptor.value; },
@@ -237,15 +246,6 @@ class Instrumentation {
                 configurable: originalDescriptor.configurable
             });
             return ['writable', originalDescriptor];
-        }
-        else if (typeof descriptor.value === 'function') {
-            const originalMethod = descriptor.value;
-            delete target[propertyKey];
-            target[propertyKey] = function () {
-                const value = arguments;
-                this.instrumentation.notify(value, undefined, 'call', [propertyKey], [(value) => { return originalMethod.apply(this, value); }, this]);
-            };
-            return ['function', originalMethod];
         }
         else if (descriptor.set !== undefined) {
             const originalDescriptor = descriptor;

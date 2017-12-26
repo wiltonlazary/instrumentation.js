@@ -17,7 +17,7 @@ let _currentBinderDispatchDetail: BinderDispatchDetail = null
 let _bypassBinderDispatch = false
 
 export type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any
-export type DispatchOperation = 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift'
+export type DispatchOperation = 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift' | 'clear'
 export type DispatchMatch = '<' | '=' | '>'
 
 export function currentBinderDispatchDetail(): any {

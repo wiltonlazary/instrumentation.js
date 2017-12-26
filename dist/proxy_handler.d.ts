@@ -23,19 +23,21 @@ export declare class ArrayProxyHandler<T extends object> extends ObjectProxyHand
     readonly handlers: any;
     get(target: T, p: PropertyKey, receiver: any): any;
 }
-export declare class MapProxyHandlerEntriesIterator {
+export declare class MapProxyHandlerEntriesIterator implements Iterable<[any, any]> {
     readonly backingMap: any;
     readonly backing: any;
     readonly observer: any;
     constructor(backingMap: any, backing: any, observer: any);
-    next(): any;
+    [Symbol.iterator](): IterableIterator<[any, any]>;
+    next(value?: any): IteratorResult<[any, any]>;
 }
-export declare class MapProxyHandlerValuesIterator {
+export declare class MapProxyHandlerValuesIterator implements Iterable<any> {
     readonly backingMap: any;
     readonly backing: any;
     readonly observer: any;
     constructor(backingMap: any, backing: any, observer: any);
-    next(): any;
+    [Symbol.iterator](): IterableIterator<any>;
+    next(value?: any): IteratorResult<any>;
 }
 export declare class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
     isMap: boolean;
