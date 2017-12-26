@@ -25,6 +25,7 @@ export declare class ArrayProxyHandler extends ObjectProxyHandler<Array<any>> {
     _handlers: any;
     readonly handlers: any;
     get(target: Array<any>, p: PropertyKey, receiver: any): any;
+    set(target: Array<any>, p: PropertyKey, value: any, receiver: any): boolean;
 }
 export declare class MapProxyHandlerEntriesIterator implements Iterable<[any, any]> {
     readonly backingMap: any;

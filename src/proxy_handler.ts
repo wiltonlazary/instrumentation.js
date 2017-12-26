@@ -221,7 +221,7 @@ export class ArrayProxyHandler extends ObjectProxyHandler<Array<any>> {
                     if (oldElement instanceof Object && oldElement.isProxy) {
                         oldElement.proxyHandler.removeObserver(this)
                     }
-                    
+
                     const res = self.backing.shift()
                     self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldElement, 'shift', [0])
                     return res
@@ -250,6 +250,25 @@ export class ArrayProxyHandler extends ObjectProxyHandler<Array<any>> {
             }
         } else {
             return super.get(target, p, receiver)
+        }
+    }
+
+    set(target: Array<any>, p: PropertyKey, value: any, receiver: any): boolean {
+        if (p == 'length') {
+            if (value < this.backing.length) {
+                for (let i = value - 1; i < this.backing.length; i++) {
+                    const element = this.backing[i]
+
+                    if (element instanceof Object && element.isProxy) {
+                        element.proxyHandler.removeObserver(this)
+                    }
+                }
+            }
+
+            this.backing.length = value
+            return true
+        } else {
+            return super.set(target, p, value, receiver)
         }
     }
 }

@@ -225,6 +225,23 @@ class ArrayProxyHandler extends ObjectProxyHandler {
             return super.get(target, p, receiver);
         }
     }
+    set(target, p, value, receiver) {
+        if (p == 'length') {
+            if (value < this.backing.length) {
+                for (let i = value - 1; i < this.backing.length; i++) {
+                    const element = this.backing[i];
+                    if (element instanceof Object && element.isProxy) {
+                        element.proxyHandler.removeObserver(this);
+                    }
+                }
+            }
+            this.backing.length = value;
+            return true;
+        }
+        else {
+            return super.set(target, p, value, receiver);
+        }
+    }
 }
 exports.ArrayProxyHandler = ArrayProxyHandler;
 class MapProxyHandlerEntriesIterator {

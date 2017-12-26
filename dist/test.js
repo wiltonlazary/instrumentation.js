@@ -54,7 +54,9 @@ test.fire('function binding test');
 //------------------------------------//
 // Array deep data binding tests
 test.arr1.push('xxx-xxx');
+test.arr1.push({ z: 1 });
 test.arr1[0].name1 = 'xx';
+test.arr1.length = 0;
 //------------------------------------//
 // Map deep data binding tests
 test.map1.set('name', 'wilton lazary');
