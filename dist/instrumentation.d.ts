@@ -23,10 +23,10 @@ export declare function getPropertyCallTypeFromPrototypeFromInstance(instance: a
 export declare function valueFromPath(object: any, templatePlate: Array<string>, path: Array<string>): any;
 export declare class Instrumentation extends Object {
     readonly owner: any;
-    deepBy: Map<string, Set<Binder>>;
-    ownInstrumented: Map<string, PropertyCallTypeDetail>;
-    outBinders: Map<string, Set<Binder>>;
-    inBinders: Map<string, Set<Binder>>;
+    deepBy: Map<any, Set<Binder>>;
+    ownInstrumented: Map<any, PropertyCallTypeDetail>;
+    outBinders: Map<any, Set<Binder>>;
+    inBinders: Map<any, Set<Binder>>;
     observedProxyHandlers: Map<ObjectProxyHandler<any>, any>;
     constructor(owner: any);
     clear(): void;
@@ -35,12 +35,12 @@ export declare class Instrumentation extends Object {
     unregisterObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any): void;
     addDeepBy(binder: Binder): void;
     removeDeepBy(binder: Binder): void;
-    ensureIntrumentation(propertyKey: string, instrumentPrototype?: boolean): PropertyCallTypeDetail;
+    ensureIntrumentation(propertyKey: any, instrumentPrototype?: boolean): PropertyCallTypeDetail;
     instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
     instrumentOwn(propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
-    bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: string, active?: boolean): Binder;
+    bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: any, active?: boolean): Binder;
     bindIn(binder: Binder): Binder;
     unbindOut(binder: Binder): void;
     unbindIn(binder: Binder): void;
-    notify(value: any, oldValue: any, operation: DispatchOperation, path: Array<string>, execute?: [(value) => any, any]): any;
+    notify(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, execute?: [(value) => any, any]): any;
 }

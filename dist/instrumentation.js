@@ -246,9 +246,9 @@ class Instrumentation extends Object {
                     let newValue = value;
                     if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
                         if (value.isProxy) {
-                            const ObjectProxyHandler = value.proxyHandler;
-                            if (ObjectProxyHandler.observer !== instrumentation) {
-                                ObjectProxyHandler.addObserver(instrumentation, propertyKey);
+                            const proxyHandler = value.proxyHandler;
+                            if (proxyHandler.observer !== instrumentation) {
+                                proxyHandler.addObserver(instrumentation, propertyKey);
                             }
                         }
                         else {

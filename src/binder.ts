@@ -1,4 +1,4 @@
-import { Instrumentation, PropertyCallType, valueFromPath } from './instrumentation'
+import { Instrumentation, PropertyCallType, valueFromPath, ABORT_ACTION } from './instrumentation'
 
 export interface BinderDispatchDetail {
     binder: Binder
@@ -35,12 +35,12 @@ export class Binder {
     constructor(
         public readonly outInstrumentation: Instrumentation,
         public readonly producer: any,
-        public readonly producerPropertyKey: string,
-        public readonly producerPropertyPath: Array<string>,
+        public readonly producerPropertyKey: any,
+        public readonly producerPropertyPath: Array<any>,
         public readonly producerPropertyPathRegExp: RegExp,
         public readonly producerPropertyCallTypeDetail: [PropertyCallType, any],
         public readonly consumer: BinderConsumerType,
-        public readonly consumerPropertyKey: string,
+        public readonly consumerPropertyKey: any,
         public readonly consumerPropertyCallType: PropertyCallType,
         public deep: boolean,
         public active: boolean
@@ -64,6 +64,7 @@ export class Binder {
 
         if (_bypassNextBinderDispatch) {
             _bypassNextBinderDispatch = false
+            result = ABORT_ACTION
         } else {
             let valueLocal = value
             let oldValueLocal = oldValue

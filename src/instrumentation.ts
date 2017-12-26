@@ -143,10 +143,10 @@ export function valueFromPath(object, templatePlate: Array<string>, path: Array<
 }
 
 export class Instrumentation extends Object {
-    deepBy: Map<string, Set<Binder>> = null
-    ownInstrumented: Map<string, PropertyCallTypeDetail> = null
-    outBinders: Map<string, Set<Binder>> = null
-    inBinders: Map<string, Set<Binder>> = null
+    deepBy: Map<any, Set<Binder>> = null
+    ownInstrumented: Map<any, PropertyCallTypeDetail> = null
+    outBinders: Map<any, Set<Binder>> = null
+    inBinders: Map<any, Set<Binder>> = null
     observedProxyHandlers: Map<ObjectProxyHandler<any>, any> = null
 
     constructor(public readonly owner: any) {
@@ -233,7 +233,7 @@ export class Instrumentation extends Object {
         }
     }
 
-    ensureIntrumentation(propertyKey: string, instrumentPrototype: boolean = false): PropertyCallTypeDetail {
+    ensureIntrumentation(propertyKey: any, instrumentPrototype: boolean = false): PropertyCallTypeDetail {
         const ownerPrototype = this.owner.constructor.prototype
         let result: PropertyCallTypeDetail = ['none', null]
 
@@ -322,10 +322,10 @@ export class Instrumentation extends Object {
 
                     if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
                         if (value.isProxy) {
-                            const ObjectProxyHandler = value.proxyHandler
+                            const proxyHandler = value.proxyHandler
 
-                            if (ObjectProxyHandler.observer !== instrumentation) {
-                                ObjectProxyHandler.addObserver(instrumentation, propertyKey)
+                            if (proxyHandler.observer !== instrumentation) {
+                                proxyHandler.addObserver(instrumentation, propertyKey)
                             }
                         } else {
                             newValue = ObjectProxyHandler.create(value, instrumentation, propertyKey)
@@ -404,7 +404,7 @@ export class Instrumentation extends Object {
         return result
     }
 
-    bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: string, active?: boolean): Binder {
+    bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: any, active?: boolean): Binder {
         if (this.outBinders === null) {
             this.outBinders = new Map()
         }
@@ -557,7 +557,7 @@ export class Instrumentation extends Object {
         }
     }
 
-    notify(value: any, oldValue: any, operation: DispatchOperation, path: Array<string>, execute?: [(value) => any, any]): any {
+    notify(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, execute?: [(value) => any, any]): any {
         if (this.outBinders !== null) {
             const propertyKey = path[0].toString()
             let abortAction = false

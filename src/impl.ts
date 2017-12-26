@@ -62,7 +62,7 @@ Object.prototype['dispose'] = function () {
     }
 }
 
-Object.prototype['bind'] = function (expression: string, consumer: BinderConsumerType, consumerPropertyKey?: string, active?: boolean): Binder {
+Object.prototype['bind'] = function (expression: string, consumer: BinderConsumerType, consumerPropertyKey?: any, active?: boolean): Binder {
     return this.instrumentation.bindOut(expression, consumer, consumerPropertyKey, active)
 }
 

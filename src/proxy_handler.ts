@@ -57,21 +57,25 @@ export class ObjectProxyHandler<T extends object> extends Object implements Prox
     }
 
     addObserver(observer: any, propertyKey: any) {
-        if (!this.observer) {
-            this.observer = observer
-            this.propertyKey = propertyKey
-        } else if (this.observerIsMap) {
-            if (!this.observer.has(observer)) {
-                this.observer.set(observer, propertyKey)
+        if (this.observer !== observer) {
+            if (!this.observer) {
+                this.observer = observer
+                this.propertyKey = propertyKey
+                observer.registerObserved(this, propertyKey)
+            } else if (this.observerIsMap) {
+                if (!this.observer.has(observer)) {
+                    this.observer.set(observer, propertyKey)
+                    observer.registerObserved(this, propertyKey)
+                }
+            } else {
+                const map = new Map()
+                map.set(this.observer, this.propertyKey)
+                this.observer = map
+                this.observerIsMap = true
+                this.propertyKey = null
+                map.set(observer, propertyKey)
                 observer.registerObserved(this, propertyKey)
             }
-        } else if (this.observer !== observer) {
-            this.observer = new Map()
-            this.observer.set(this.observer, this.propertyKey)
-            this.observerIsMap = true
-            this.propertyKey = null
-            this.observer.set(observer, propertyKey)
-            observer.registerObserved(this, propertyKey)
         }
     }
 

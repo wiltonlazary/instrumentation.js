@@ -40,6 +40,7 @@ class Binder {
         let result = undefined;
         if (_bypassNextBinderDispatch) {
             _bypassNextBinderDispatch = false;
+            result = instrumentation_1.ABORT_ACTION;
         }
         else {
             let valueLocal = value;
