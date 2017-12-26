@@ -16,9 +16,9 @@ export declare class ObjectProxyHandler<T extends object> extends Object impleme
     registerObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any): void;
     unregisterObserved(proxyHandler: ObjectProxyHandler<any>, propertyKey: any): void;
     notify(value: any, oldValue: any, operation: string, path: Array<any>): void;
-    get(target: T, p: any, receiver: any): any;
-    set(target: T, p: any, value: any, receiver: any): boolean;
-    deleteProperty(target: T, p: any): boolean;
+    get(target: T, p: PropertyKey, receiver: any): any;
+    set(target: T, p: PropertyKey, value: any, receiver: any): boolean;
+    deleteProperty(target: T, p: PropertyKey): boolean;
 }
 export declare class ArrayProxyHandler extends ObjectProxyHandler<Array<any>> {
     isArray: boolean;

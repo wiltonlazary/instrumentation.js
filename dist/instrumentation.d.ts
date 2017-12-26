@@ -5,8 +5,8 @@ export declare const ABORT_ACTION: {
 };
 export declare type PropertyCallType = 'none' | 'function' | 'setter' | 'writable';
 export declare type PropertyCallTypeDetail = [PropertyCallType, any];
-export declare type BindOutParamsType = Array<[string, (value: any, detai: BinderDispatchDetail) => any] | [string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [string, any, any] | [string, any, any, boolean]>;
-export declare type BindInParamsType = Array<[any, string, (value: any, detai: BinderDispatchDetail) => any] | [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [any, string, any] | [any, string, any, boolean]>;
+export declare type BindOutParamsType = Array<[string, (value: any, detail: BinderDispatchDetail) => any] | [string, (value: any, detail: BinderDispatchDetail) => any, boolean] | [string, any, any] | [string, any, any, boolean]>;
+export declare type BindInParamsType = Array<[any, string, (value: any, detail: BinderDispatchDetail) => any] | [any, string, (value: any, detail: BinderDispatchDetail) => any, boolean] | [any, string, any] | [any, string, any, boolean]>;
 export interface PropertyDescriptorPrototype {
     isPropertyDescriptorPrototype: boolean;
     propertyKey: PropertyKey;

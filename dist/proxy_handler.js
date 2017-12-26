@@ -131,12 +131,21 @@ class ObjectProxyHandler extends Object {
     }
     set(target, p, value, receiver) {
         const oldValue = this.backing[p];
+        if (oldValue instanceof Object && oldValue.isProxy) {
+            oldValue.proxyHandler.removeObserver(this);
+        }
+        if (value instanceof Object && value.isProxy) {
+            value.proxyHandler.addObserver(this);
+        }
         this.backing[p] = value;
         this.notify(value, oldValue, 'set', [p]);
         return true;
     }
     deleteProperty(target, p) {
         const oldValue = this.backing[p];
+        if (oldValue instanceof Object && oldValue.isProxy) {
+            oldValue.proxyHandler.removeObserver(this);
+        }
         delete this.backing[p];
         this.notify(undefined, oldValue, 'delete', [p]);
         return true;
@@ -154,27 +163,42 @@ class ArrayProxyHandler extends ObjectProxyHandler {
         if (this._handlers === null) {
             this._handlers = {
                 push: (element) => {
+                    if (element instanceof Object && element.isProxy) {
+                        element.proxyHandler.addObserver(this);
+                    }
                     const res = self.backing.push(element);
                     self.notify(element, undefined, 'push', [res - 1]);
                     return res;
                 },
                 pop: () => {
                     const index = self.backing.length - 1;
-                    const oldValue = index >= 0 ? self.backing[index] : undefined;
+                    const oldElement = index >= 0 ? self.backing[index] : undefined;
+                    if (oldElement instanceof Object && oldElement.isProxy) {
+                        oldElement.proxyHandler.removeObserver(this);
+                    }
                     const res = self.backing.pop();
-                    self.notify(undefined, oldValue, 'pop', [index]);
+                    self.notify(undefined, oldElement, 'pop', [index]);
                     return res;
                 },
                 unshift: (element) => {
-                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined;
+                    const oldElement = self.backing.length >= 1 ? self.backing[0] : undefined;
+                    if (element instanceof Object && element.isProxy) {
+                        element.proxyHandler.addObserver(this);
+                    }
+                    if (oldElement instanceof Object && oldElement.isProxy) {
+                        oldElement.proxyHandler.removeObserver(this);
+                    }
                     const res = self.backing.unshift(element);
-                    self.notify(element, oldValue, 'unshift', [0]);
+                    self.notify(element, oldElement, 'unshift', [0]);
                     return res;
                 },
                 shift: () => {
-                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined;
+                    const oldElement = self.backing.length >= 1 ? self.backing[0] : undefined;
+                    if (oldElement instanceof Object && oldElement.isProxy) {
+                        oldElement.proxyHandler.removeObserver(this);
+                    }
                     const res = self.backing.shift();
-                    self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldValue, 'shift', [0]);
+                    self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldElement, 'shift', [0]);
                     return res;
                 }
             };

@@ -10,15 +10,15 @@ const propertyCallTypeFromPrototypeCache = new Map<any, Map<any, PropertyCallTyp
 const binderInstrumented = new Map<any, Map<any, PropertyCallTypeDetail>>()
 
 export type BindOutParamsType = Array<
-    [string, (value: any, detai: BinderDispatchDetail) => any] |
-    [string, (value: any, detai: BinderDispatchDetail) => any, boolean] |
+    [string, (value: any, detail: BinderDispatchDetail) => any] |
+    [string, (value: any, detail: BinderDispatchDetail) => any, boolean] |
     [string, any, any] |
     [string, any, any, boolean]
     >
 
 export type BindInParamsType = Array<
-    [any, string, (value: any, detai: BinderDispatchDetail) => any] |
-    [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] |
+    [any, string, (value: any, detail: BinderDispatchDetail) => any] |
+    [any, string, (value: any, detail: BinderDispatchDetail) => any, boolean] |
     [any, string, any] |
     [any, string, any, boolean]
     >

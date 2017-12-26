@@ -36,7 +36,7 @@ export class ObjectProxyHandler<T extends object> extends Object implements Prox
             enumerable: false,
             configurable: false
         })
-      
+
         return value
     }
 
@@ -129,7 +129,7 @@ export class ObjectProxyHandler<T extends object> extends Object implements Prox
         }
     }
 
-    get(target: T, p: any, receiver: any): any {
+    get(target: T, p: PropertyKey, receiver: any): any {
         let value = this.backing[p]
 
         if (!(value instanceof Object) || value.isProxy || value.isProxyHandler) {
@@ -141,15 +141,29 @@ export class ObjectProxyHandler<T extends object> extends Object implements Prox
         }
     }
 
-    set(target: T, p: any, value: any, receiver: any): boolean {
+    set(target: T, p: PropertyKey, value: any, receiver: any): boolean {
         const oldValue = this.backing[p]
+
+        if (oldValue instanceof Object && oldValue.isProxy) {
+            oldValue.proxyHandler.removeObserver(this)
+        }
+
+        if (value instanceof Object && value.isProxy) {
+            value.proxyHandler.addObserver(this)
+        }
+
         this.backing[p] = value
         this.notify(value, oldValue, 'set', [p])
         return true
     }
 
-    deleteProperty(target: T, p: any): boolean {
+    deleteProperty(target: T, p: PropertyKey): boolean {
         const oldValue = this.backing[p]
+
+        if (oldValue instanceof Object && oldValue.isProxy) {
+            oldValue.proxyHandler.removeObserver(this)
+        }
+
         delete this.backing[p]
         this.notify(undefined, oldValue, 'delete', [p])
         return true
@@ -166,27 +180,50 @@ export class ArrayProxyHandler extends ObjectProxyHandler<Array<any>> {
         if (this._handlers === null) {
             this._handlers = {
                 push: (element): number => {
+                    if (element instanceof Object && element.isProxy) {
+                        element.proxyHandler.addObserver(this)
+                    }
+
                     const res = self.backing.push(element)
                     self.notify(element, undefined, 'push', [res - 1])
                     return res
                 },
                 pop: (): any => {
                     const index = self.backing.length - 1
-                    const oldValue = index >= 0 ? self.backing[index] : undefined
+                    const oldElement = index >= 0 ? self.backing[index] : undefined
+
+                    if (oldElement instanceof Object && oldElement.isProxy) {
+                        oldElement.proxyHandler.removeObserver(this)
+                    }
+
                     const res = self.backing.pop()
-                    self.notify(undefined, oldValue, 'pop', [index])
+                    self.notify(undefined, oldElement, 'pop', [index])
                     return res
                 },
                 unshift: (element): number => {
-                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined
+                    const oldElement = self.backing.length >= 1 ? self.backing[0] : undefined
+
+                    if (element instanceof Object && element.isProxy) {
+                        element.proxyHandler.addObserver(this)
+                    }
+
+                    if (oldElement instanceof Object && oldElement.isProxy) {
+                        oldElement.proxyHandler.removeObserver(this)
+                    }
+
                     const res = self.backing.unshift(element)
-                    self.notify(element, oldValue, 'unshift', [0])
+                    self.notify(element, oldElement, 'unshift', [0])
                     return res
                 },
                 shift: (): any => {
-                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined
+                    const oldElement = self.backing.length >= 1 ? self.backing[0] : undefined
+
+                    if (oldElement instanceof Object && oldElement.isProxy) {
+                        oldElement.proxyHandler.removeObserver(this)
+                    }
+                    
                     const res = self.backing.shift()
-                    self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldValue, 'shift', [0])
+                    self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldElement, 'shift', [0])
                     return res
                 }
             }
