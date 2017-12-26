@@ -98,6 +98,6 @@ test.obj1.data = { count: 1, content: '---' }
 test.obj1.data.content = { type: 'new_content' }
 //------------------------------------//
 
-// Clelanup
+// Cleanup
 test.dispose()
 //------------------------------------//
