@@ -2,10 +2,26 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const binder_1 = require("./binder");
 const proxy_handler_1 = require("./proxy_handler");
+exports.ABORT_ACTION = { toString: () => 'ABORT_ACTION' };
 const prototypeInstrumented = new Map();
 const propertyCallTypeFromPrototypeCache = new Map();
 const binderInstrumented = new Map();
-exports.ABORT_ACTION = { toString: () => 'ABORT_ACTION' };
+function pathContains(path, contained) {
+    if (contained.length > path.length) {
+        return false;
+    }
+    else {
+        for (let i = 0; i < contained.length; i++) {
+            const pv = path[i];
+            const ov = contained[i];
+            if (pv !== '*' && ov !== '*' && pv != ov) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+exports.pathContains = pathContains;
 function getHeadPrototype(prototype) {
     let nextPrototype = prototype;
     do {
@@ -28,6 +44,7 @@ function getPropertyDescriptorPrototype(prototype, propertyKey) {
         nextPrototype = Object.getPrototypeOf(prototype);
     } while (descriptor === undefined && !!nextPrototype);
     return descriptor === undefined ? undefined : {
+        isPropertyDescriptorPrototype: true,
         propertyKey: propertyKey,
         descriptor: descriptor,
         prototype: prototype
@@ -63,20 +80,21 @@ function getPropertyCallTypeFromPrototypeFromInstance(instance, propertyKey) {
     return getPropertyCallTypeFromPrototype(instance.constructor.prototype, propertyKey);
 }
 exports.getPropertyCallTypeFromPrototypeFromInstance = getPropertyCallTypeFromPrototypeFromInstance;
-function valueFromPath(object, path) {
+function valueFromPath(object, templatePlate, path) {
     if (object instanceof Object) {
         let current = object;
-        let index = 0;
-        for (const element of path) {
-            const test = object; //Test
-            current = current[element];
+        for (let i = 0; i < templatePlate.length; i++) {
+            let key = templatePlate[i];
+            if (key === '*') {
+                key = path[i];
+            }
+            current = current[key];
             if (!(current instanceof Object)) {
-                if (index < path.length - 1) {
+                if (i < path.length - 1) {
                     current = undefined;
                 }
                 break;
             }
-            index += 1;
         }
         return current;
     }
@@ -137,64 +155,18 @@ class Instrumentation {
             }
         }
     }
-    defineOwnProperty(propertyKey) {
-        let backingProperty = this.owner[propertyKey];
-        delete this.owner[propertyKey];
-        const backingPropertyDescriptor = {
-            get: function () {
-                return backingProperty;
-            },
-            set: function (value) {
-                backingProperty = value;
-            },
-            enumerable: false,
-            configurable: false
-        };
-        Object.defineProperty(this.owner, propertyKey, {
-            get: function () {
-                return backingProperty;
-            },
-            set: function (value) {
-                const instrumentation = this.instrumentation;
-                let newValue = value;
-                if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
-                    if (value.isProxy) {
-                        const proxyHandler = value.proxyHandler;
-                        if (proxyHandler.observer !== instrumentation) {
-                            proxyHandler.addObserver(instrumentation, propertyKey);
-                        }
-                    }
-                    else {
-                        newValue = proxy_handler_1.ProxyHandler.create(value, instrumentation, propertyKey);
-                    }
-                }
-                this.instrumentation.notify(newValue, backingProperty, 'set', [propertyKey], [(value) => {
-                        if (backingProperty && backingProperty.isProxy) {
-                            backingProperty.proxyHandler.removeObserver(instrumentation);
-                        }
-                        backingProperty = value;
-                    }, this]);
-            },
-            enumerable: true,
-            configurable: false
-        });
-        return ['ownSetter', backingPropertyDescriptor];
-    }
-    ensureIntrumentation(propertyKey) {
+    ensureIntrumentation(propertyKey, instrumentPrototype = false) {
         const ownerPrototype = this.owner.constructor.prototype;
         let result = ['none', null];
         if (this.ownInstrumented !== null && this.ownInstrumented.has(propertyKey)) {
             result = this.ownInstrumented.get(propertyKey);
         }
         else if (!binderInstrumented.has(ownerPrototype) || !binderInstrumented.get(ownerPrototype).has(propertyKey)) {
-            if (Object.getOwnPropertyDescriptor(this.owner, propertyKey) !== undefined) {
-                result = this.defineOwnProperty(propertyKey);
-                if (this.ownInstrumented === null) {
-                    this.ownInstrumented = new Map();
-                }
-                this.ownInstrumented.set(propertyKey, result);
+            const ownPropertyDescriptor = Object.getOwnPropertyDescriptor(this.owner, propertyKey);
+            if (ownPropertyDescriptor !== undefined) {
+                result = this.instrumentOwn(propertyKey, ownPropertyDescriptor);
             }
-            else {
+            else if (instrumentPrototype) {
                 let binderRegisteredMap = binderInstrumented.get(ownerPrototype);
                 if (!binderRegisteredMap) {
                     binderRegisteredMap = new Map();
@@ -211,7 +183,7 @@ class Instrumentation {
                         prototypeRegisteredMap = new Map();
                         prototypeInstrumented.set(propertyDescriptorPrototype.prototype, prototypeRegisteredMap);
                     }
-                    result = this.observed(propertyDescriptorPrototype);
+                    result = this.instrument(propertyDescriptorPrototype.prototype, propertyDescriptorPrototype.propertyKey, propertyDescriptorPrototype.descriptor);
                     prototypeRegisteredMap.set(propertyKey, result);
                 }
                 else {
@@ -219,44 +191,53 @@ class Instrumentation {
                 }
                 binderRegisteredMap.set(propertyKey, result);
             }
+            else {
+                const propertyDescriptorPrototype = getPropertyDescriptorPrototype(ownerPrototype, propertyKey);
+                if (!propertyDescriptorPrototype) {
+                    throw new Error(`Property key not found on owner prototype: ${propertyKey}`);
+                }
+                else {
+                    result = this.instrumentOwn(propertyKey, propertyDescriptorPrototype.descriptor);
+                }
+            }
         }
         else {
             result = binderInstrumented.get(ownerPrototype).get(propertyKey);
         }
         return result;
     }
-    observed(propertyDescriptorPrototype) {
-        if (typeof propertyDescriptorPrototype.descriptor.value === 'function') {
-            const originalMethod = propertyDescriptorPrototype.descriptor.value;
-            delete propertyDescriptorPrototype.prototype[propertyDescriptorPrototype.propertyKey];
-            propertyDescriptorPrototype.prototype[propertyDescriptorPrototype.propertyKey] = function () {
+    instrument(target, propertyKey, descriptor) {
+        if (typeof descriptor.value === 'function') {
+            const originalMethod = descriptor.value;
+            delete target[propertyKey];
+            target[propertyKey] = function () {
                 const value = arguments;
-                this.instrumentation.notify(value, undefined, 'call', [propertyDescriptorPrototype.propertyKey], [(value) => { return originalMethod.apply(this, value); }, this]);
+                this.instrumentation.notify(value, undefined, 'call', [propertyKey], [(value) => { return originalMethod.apply(this, value); }, this]);
             };
             return ['function', originalMethod];
         }
-        else if (propertyDescriptorPrototype.descriptor.set !== undefined) {
-            const originalDescriptor = propertyDescriptorPrototype.descriptor;
-            Object.defineProperty(propertyDescriptorPrototype.prototype, propertyDescriptorPrototype.propertyKey, {
+        else if (descriptor.set !== undefined) {
+            const originalDescriptor = descriptor;
+            Object.defineProperty(target, propertyKey, {
                 get: originalDescriptor.get,
                 set: function (value) {
                     const instrumentation = this.instrumentation;
                     let oldValue = originalDescriptor.get.call(this);
                     let newValue = value;
-                    if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyDescriptorPrototype.propertyKey)) {
+                    if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
                         if (value.isProxy) {
-                            const proxyHandler = value.proxyHandler;
-                            if (proxyHandler.observer !== instrumentation) {
-                                proxyHandler.addObserver(instrumentation, propertyDescriptorPrototype.propertyKey);
+                            const ObjectProxyHandler = value.proxyHandler;
+                            if (ObjectProxyHandler.observer !== instrumentation) {
+                                ObjectProxyHandler.addObserver(instrumentation, propertyKey);
                             }
                         }
                         else {
-                            newValue = proxy_handler_1.ProxyHandler.create(value, instrumentation, propertyDescriptorPrototype.propertyKey);
+                            newValue = proxy_handler_1.ObjectProxyHandler.create(value, instrumentation, propertyKey);
                         }
                     }
-                    this.instrumentation.notify(newValue, oldValue, 'set', [propertyDescriptorPrototype.propertyKey], [(value) => {
+                    this.instrumentation.notify(newValue, oldValue, 'set', [propertyKey], [(value) => {
                             if (oldValue && oldValue.isProxy) {
-                                oldValue.proxyHandler.removeObserver(instrumentation);
+                                oldValue.ObjectProxyHandler.removeObserver(instrumentation);
                             }
                             originalDescriptor.set.call(this, value);
                         }, this]);
@@ -269,6 +250,14 @@ class Instrumentation {
         else {
             return ['none', null];
         }
+    }
+    instrumentOwn(propertyKey, descriptor) {
+        if (this.ownInstrumented === null) {
+            this.ownInstrumented = new Map();
+        }
+        const result = this.instrument(this.owner, propertyKey, descriptor);
+        this.ownInstrumented.set(propertyKey, result);
+        return result;
     }
     bindOut(key, consumer, consumerPropertyKey, active) {
         if (this.outBinders === null) {
@@ -297,7 +286,7 @@ class Instrumentation {
             producerPropertyKey = producerPropertyKey.substring(0, producerPropertyKey.indexOf('.'));
         }
         const producerPropertyCallTypeDetail = this.ensureIntrumentation(producerPropertyKey);
-        const binder = new binder_1.Binder(this, this.owner, producerPropertyKey, producerPropertyKeyPath, producerPropertyKeyPath.split('.'), producerPropertyKeyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, !consumerPropertyKey ? 'none' : getPropertyCallTypeFromPrototypeFromInstance(consumer, consumerPropertyKey)[0], deep, active === undefined ? true : active);
+        const binder = new binder_1.Binder(this, this.owner, producerPropertyKey, producerPropertyKeyPath.split('.'), producerPropertyKeyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, !consumerPropertyKey ? 'none' : getPropertyCallTypeFromPrototypeFromInstance(consumer, consumerPropertyKey)[0], deep, active === undefined ? true : active);
         let bindersLocal = this.outBinders.get(producerPropertyKey);
         if (bindersLocal === undefined) {
             bindersLocal = new Set();
@@ -310,32 +299,18 @@ class Instrumentation {
         if (binder.deep) {
             this.addDeepBy(binder);
             switch (producerPropertyCallTypeDetail[0]) {
-                case 'ownSetter':
-                    {
-                        const descriptor = producerPropertyCallTypeDetail[1];
-                        const value = descriptor.get();
-                        if (value.isProxy) {
-                            if (value.observer !== this) {
-                                value.addObserver(this, producerPropertyKey);
-                            }
-                        }
-                        else {
-                            descriptor.set(proxy_handler_1.ProxyHandler.create(value, this, producerPropertyKey));
-                        }
-                    }
-                    break;
                 case 'setter':
                     {
                         const descriptor = producerPropertyCallTypeDetail[1];
                         const value = descriptor.get.call(this.owner);
                         if (value.isProxy) {
-                            const proxyHandler = value.proxyHandler;
-                            if (proxyHandler.observer !== this) {
-                                proxyHandler.addObserver(this, producerPropertyKey);
+                            const ObjectProxyHandler = value.proxyHandler;
+                            if (ObjectProxyHandler.observer !== this) {
+                                ObjectProxyHandler.addObserver(this, producerPropertyKey);
                             }
                         }
                         else {
-                            descriptor.set.call(this.owner, proxy_handler_1.ProxyHandler.create(value, this, producerPropertyKey));
+                            descriptor.set.call(this.owner, proxy_handler_1.ObjectProxyHandler.create(value, this, producerPropertyKey));
                         }
                     }
                     break;
@@ -389,22 +364,16 @@ class Instrumentation {
                 const pathToMatch = path.slice(1).join('.');
                 for (const binder of bindersByKey) {
                     if (binder.active) {
-                        if (binder.producerPropertyKeyPath == pathStr) {
-                            if (binder.dispatch(value, oldValue, operation, path, '=') === exports.ABORT_ACTION) {
+                        if (pathContains(binder.producerPropertyPath, path)) {
+                            if (binder.dispatch(value, oldValue, operation, path, path.length === binder.producerPropertyPath.length ? '=' : '<') === exports.ABORT_ACTION) {
                                 abortAction = true;
                                 break;
                             }
                         }
-                        else if (binder.producerPropertyKeyPathParts.slice(0, binder.producerPropertyKeyPathParts.length - 1).join('.').startsWith(pathStr)) {
-                            if (binder.dispatch(value, oldValue, operation, path, '<') === exports.ABORT_ACTION) {
-                                abortAction = true;
-                                break;
-                            }
-                        }
-                        else if (path.length > binder.producerPropertyKeyPathParts.length &&
-                            pathStr.startsWith(`${binder.producerPropertyKeyPath}.`) &&
-                            binder.producerPropertyKeyPathRegExp &&
-                            binder.producerPropertyKeyPathRegExp.exec(path.slice(binder.producerPropertyKeyPathParts.length).join('.'))) {
+                        else if (path.length > binder.producerPropertyPath.length &&
+                            pathContains(path, binder.producerPropertyPath) &&
+                            binder.producerPropertyPathRegExp &&
+                            binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))) {
                             if (binder.dispatch(value, oldValue, operation, path, '>') === exports.ABORT_ACTION) {
                                 abortAction = true;
                                 break;

@@ -1,23 +1,25 @@
 import { Binder, BinderDispatchDetail, DispatchOperation } from './binder';
-export declare type PropertyCallTypeDetail = [PropertyCallType, any];
 export declare const ABORT_ACTION: {
     toString: () => string;
 };
-export declare type PropertyCallType = 'none' | 'function' | 'setter' | 'ownSetter';
+export declare type PropertyCallType = 'none' | 'function' | 'setter';
+export declare type PropertyCallTypeDetail = [PropertyCallType, any];
 export declare type BindOutParamsType = Array<[string, (value: any, detai: BinderDispatchDetail) => any] | [string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [string, any, string] | [string, any, string, boolean]>;
 export declare type BindInParamsType = Array<[any, string, (value: any, detai: BinderDispatchDetail) => any] | [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [any, string, string] | [any, string, string, boolean]>;
 export interface PropertyDescriptorPrototype {
+    isPropertyDescriptorPrototype: boolean;
     propertyKey: string;
     descriptor: PropertyDescriptor;
     prototype: any;
 }
+export declare function pathContains(path: Array<string>, contained: Array<string>): boolean;
 export declare function getHeadPrototype(prototype: any): any;
 export declare function getHeadPrototypeFromInstance(instance: any): any;
 export declare function getPropertyDescriptorPrototype(prototype: any, propertyKey: string): PropertyDescriptorPrototype;
 export declare function getPropertyDescriptorPrototypeFromInstance(instance: any, propertyKey: string): PropertyDescriptorPrototype;
 export declare function getPropertyCallTypeFromPrototype(prototype: any, propertyKey: string): PropertyCallTypeDetail;
 export declare function getPropertyCallTypeFromPrototypeFromInstance(instance: any, propertyKey: string): PropertyCallTypeDetail;
-export declare function valueFromPath(object: any, path: Array<string>): any;
+export declare function valueFromPath(object: any, templatePlate: Array<string>, path: Array<string>): any;
 export declare class Instrumentation {
     readonly owner: any;
     deepBy: Map<string, Set<Binder>>;
@@ -29,9 +31,9 @@ export declare class Instrumentation {
     dispose(): void;
     addDeepBy(binder: Binder): void;
     removeDeepBy(binder: Binder): void;
-    defineOwnProperty(propertyKey: string): [PropertyCallType, PropertyDescriptor];
-    ensureIntrumentation(propertyKey: string): PropertyCallTypeDetail;
-    observed(propertyDescriptorPrototype: PropertyDescriptorPrototype): PropertyCallTypeDetail;
+    ensureIntrumentation(propertyKey: string, instrumentPrototype?: boolean): PropertyCallTypeDetail;
+    instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
+    instrumentOwn(propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
     bindOut(key: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: string, active?: boolean): Binder;
     bindIn(binder: Binder): Binder;
     unbindOut(binder: Binder): void;

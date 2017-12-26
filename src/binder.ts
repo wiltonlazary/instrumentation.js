@@ -17,7 +17,7 @@ let _currentBinderDispatchDetail: BinderDispatchDetail = null
 let _bypassBinderDispatch = false
 
 export type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any
-export type DispatchOperation = 'call' | 'delete' | 'set'
+export type DispatchOperation = 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift'
 export type DispatchMatch = '<' | '=' | '>'
 
 export function currentBinderDispatchDetail(): any {
@@ -36,9 +36,8 @@ export class Binder {
         public readonly outInstrumentation: Instrumentation,
         public readonly producer: any,
         public readonly producerPropertyKey: string,
-        public readonly producerPropertyKeyPath: string,
-        public readonly producerPropertyKeyPathParts: Array<string>,
-        public readonly producerPropertyKeyPathRegExp: RegExp,
+        public readonly producerPropertyPath: Array<string>,
+        public readonly producerPropertyPathRegExp: RegExp,
         public readonly producerPropertyCallTypeDetail: [PropertyCallType, any],
         public readonly consumer: BinderConsumerType,
         public readonly consumerPropertyKey: string,
@@ -70,11 +69,11 @@ export class Binder {
             let oldValueLocal = oldValue
 
             if (match === '<') {
-                const fromPath = this.producerPropertyKeyPathParts.slice(path.length)
-                valueLocal = valueFromPath(value, fromPath)
-                oldValueLocal = valueFromPath(oldValue, fromPath)
+                const templatePath = this.producerPropertyPath.slice(path.length)
+                valueLocal = valueFromPath(value, templatePath, path)
+                oldValueLocal = valueFromPath(oldValue, templatePath, path)
             } else if (match === '>') {
-                valueLocal = valueFromPath(this.outOwner[this.producerPropertyKey], this.producerPropertyKeyPathParts.slice(1))
+                valueLocal = valueFromPath(this.outOwner, this.producerPropertyPath, path)
                 oldValueLocal = undefined
             }
 

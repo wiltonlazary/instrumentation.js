@@ -4,18 +4,25 @@ export const loggerObserver = {
     }
 }
 
-const booleanTruePropertyDefinition = {
+const booleanTruePropertyDefinition: PropertyDescriptor = {
     get: function () { return true },
     enumerable: false,
     configurable: false
 }
 
-export class ProxyHandler<T extends object> implements ProxyHandler<T> {
+export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
     observerIsMap = false
 
     static create(backing: any, observer: any = null, propertyKey: PropertyKey = null): any {
-        const proxyHandler = new ProxyHandler(backing, observer, propertyKey)
-        const value = new Proxy(backing, new ProxyHandler(backing, observer, propertyKey))
+        let proxyHandler = null
+
+        if (Array.isArray(backing)) {
+            proxyHandler = new ArrayProxyHandler(backing, observer, propertyKey)
+        } else {
+            proxyHandler = new ObjectProxyHandler(backing, observer, propertyKey)
+        }
+
+        const value = new Proxy(backing, proxyHandler)
         Object.defineProperty(value, 'isProxy', booleanTruePropertyDefinition)
 
         Object.defineProperty(value, 'proxyHandler', {
@@ -94,7 +101,7 @@ export class ProxyHandler<T extends object> implements ProxyHandler<T> {
         if (!(value instanceof Object) || value.isProxy || value.isProxyHandler) {
             return value
         } else {
-            value = ProxyHandler.create(value, this, p)
+            value = ObjectProxyHandler.create(value, this, p)
             this.backing[p] = value
             return value
         }
@@ -115,6 +122,66 @@ export class ProxyHandler<T extends object> implements ProxyHandler<T> {
     }
 }
 
+export class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+    _handlers = null
+
+    get handlers(): any {
+        const self = this
+
+        if (this._handlers === null) {
+            this._handlers = {
+                push: (element): number => {
+                    const res = self.backing.push(element)
+                    self.notify(element, undefined, 'push', [res - 1])
+                    return res
+                },
+                pop: (): any => {
+                    const index = self.backing.length - 1
+                    const oldValue = index >= 0 ? self.backing[index] : undefined
+                    const res = self.backing.pop()
+                    self.notify(undefined, oldValue, 'pop', [index])
+                    return res
+                },
+                unshift: (element): number => {
+                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined
+                    const res = self.backing.unshift(element)
+                    self.notify(element, oldValue, 'unshift', [0])
+                    return res
+                },
+                shift: (): any => {
+                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined
+                    const res = self.backing.shift()
+                    self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldValue, 'shift', [0])
+                    return res
+                }
+            }
+        }
+
+        return this._handlers
+    }
+
+    get(target: T, p: PropertyKey, receiver: any): any {
+        let value = this.backing[p]
+
+        if (typeof value === 'function') {
+            switch (p) {
+                case 'push':
+                    return this.handlers.push
+                case 'pop':
+                    return this.handlers.pop
+                case 'shift':
+                    return this.handlers.shift
+                case 'unshift':
+                    return this.handlers.unshift
+                default:
+                    return super.get(target, p, receiver)
+            }
+        } else {
+            return super.get(target, p, receiver)
+        }
+    }
+}
+
 //----------------------------------------------------------------------------------//
 declare const global: any
-global.ProxyHandler = ProxyHandler
+global.ObjectProxyHandler = ObjectProxyHandler

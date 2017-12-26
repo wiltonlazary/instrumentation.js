@@ -12,13 +12,12 @@ function bypassBinderDispatch() {
 }
 exports.bypassBinderDispatch = bypassBinderDispatch;
 class Binder {
-    constructor(outInstrumentation, producer, producerPropertyKey, producerPropertyKeyPath, producerPropertyKeyPathParts, producerPropertyKeyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, consumerPropertyCallType, deep, active) {
+    constructor(outInstrumentation, producer, producerPropertyKey, producerPropertyPath, producerPropertyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, consumerPropertyCallType, deep, active) {
         this.outInstrumentation = outInstrumentation;
         this.producer = producer;
         this.producerPropertyKey = producerPropertyKey;
-        this.producerPropertyKeyPath = producerPropertyKeyPath;
-        this.producerPropertyKeyPathParts = producerPropertyKeyPathParts;
-        this.producerPropertyKeyPathRegExp = producerPropertyKeyPathRegExp;
+        this.producerPropertyPath = producerPropertyPath;
+        this.producerPropertyPathRegExp = producerPropertyPathRegExp;
         this.producerPropertyCallTypeDetail = producerPropertyCallTypeDetail;
         this.consumer = consumer;
         this.consumerPropertyKey = consumerPropertyKey;
@@ -46,12 +45,12 @@ class Binder {
             let valueLocal = value;
             let oldValueLocal = oldValue;
             if (match === '<') {
-                const fromPath = this.producerPropertyKeyPathParts.slice(path.length);
-                valueLocal = instrumentation_1.valueFromPath(value, fromPath);
-                oldValueLocal = instrumentation_1.valueFromPath(oldValue, fromPath);
+                const templatePath = this.producerPropertyPath.slice(path.length);
+                valueLocal = instrumentation_1.valueFromPath(value, templatePath, path);
+                oldValueLocal = instrumentation_1.valueFromPath(oldValue, templatePath, path);
             }
             else if (match === '>') {
-                valueLocal = instrumentation_1.valueFromPath(this.outOwner[this.producerPropertyKey], this.producerPropertyKeyPathParts.slice(1));
+                valueLocal = instrumentation_1.valueFromPath(this.outOwner, this.producerPropertyPath, path);
                 oldValueLocal = undefined;
             }
             const dispatchDetail = {

@@ -1,5 +1,5 @@
 import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType } from './binder'
-import { ProxyHandler } from './proxy_handler'
+import { ObjectProxyHandler } from './proxy_handler'
 
 export const ABORT_ACTION = { toString: () => 'ABORT_ACTION' }
 export type PropertyCallType = 'none' | 'function' | 'setter'
@@ -28,6 +28,23 @@ export interface PropertyDescriptorPrototype {
     propertyKey: string
     descriptor: PropertyDescriptor
     prototype: any
+}
+
+export function pathContains(path: Array<string>, contained: Array<string>): boolean {
+    if (contained.length > path.length) {
+        return false
+    } else {
+        for (let i = 0; i < contained.length; i++) {
+            const pv = path[i]
+            const ov = contained[i]
+
+            if (pv !== '*' && ov !== '*' && pv != ov) {
+                return false
+            }
+        }
+
+        return true
+    }
 }
 
 export function getHeadPrototype(prototype: any): any {
@@ -97,24 +114,26 @@ export function getPropertyCallTypeFromPrototypeFromInstance(instance, propertyK
     return getPropertyCallTypeFromPrototype(instance.constructor.prototype, propertyKey)
 }
 
-export function valueFromPath(object, path: Array<string>): any {
+export function valueFromPath(object, templatePlate: Array<string>, path: Array<string>): any {
     if (object instanceof Object) {
         let current = object
-        let index = 0
 
-        for (const element of path) {
-            const test = object//Test
-            current = current[element]
+        for (let i = 0; i < templatePlate.length; i++) {
+            let key = templatePlate[i]
+
+            if (key === '*') {
+                key = path[i]
+            }
+
+            current = current[key]
 
             if (!(current instanceof Object)) {
-                if (index < path.length - 1) {
+                if (i < path.length - 1) {
                     current = undefined
                 }
 
                 break
             }
-
-            index += 1
         }
 
         return current
@@ -281,13 +300,13 @@ export class Instrumentation {
 
                     if (value instanceof Object && instrumentation.deepBy && instrumentation.deepBy.has(propertyKey)) {
                         if (value.isProxy) {
-                            const proxyHandler = value.proxyHandler
+                            const ObjectProxyHandler = value.proxyHandler
 
-                            if (proxyHandler.observer !== instrumentation) {
-                                proxyHandler.addObserver(instrumentation, propertyKey)
+                            if (ObjectProxyHandler.observer !== instrumentation) {
+                                ObjectProxyHandler.addObserver(instrumentation, propertyKey)
                             }
                         } else {
-                            newValue = ProxyHandler.create(value, instrumentation, propertyKey)
+                            newValue = ObjectProxyHandler.create(value, instrumentation, propertyKey)
                         }
                     }
 
@@ -295,7 +314,7 @@ export class Instrumentation {
                         newValue, oldValue, 'set', [propertyKey],
                         [(value) => {
                             if (oldValue && oldValue.isProxy) {
-                                oldValue.proxyHandler.removeObserver(instrumentation)
+                                oldValue.ObjectProxyHandler.removeObserver(instrumentation)
                             }
 
                             originalDescriptor.set.call(this, value)
@@ -358,8 +377,7 @@ export class Instrumentation {
         const producerPropertyCallTypeDetail = this.ensureIntrumentation(producerPropertyKey)
 
         const binder = new Binder(
-            this, this.owner, producerPropertyKey, producerPropertyKeyPath,
-            producerPropertyKeyPath.split('.'), producerPropertyKeyPathRegExp,
+            this, this.owner, producerPropertyKey, producerPropertyKeyPath.split('.'), producerPropertyKeyPathRegExp,
             producerPropertyCallTypeDetail, consumer, consumerPropertyKey,
             !consumerPropertyKey ? 'none' : getPropertyCallTypeFromPrototypeFromInstance(consumer, consumerPropertyKey)[0],
             deep, active === undefined ? true : active
@@ -387,13 +405,13 @@ export class Instrumentation {
                     const value = descriptor.get.call(this.owner)
 
                     if (value.isProxy) {
-                        const proxyHandler = value.proxyHandler
+                        const ObjectProxyHandler = value.proxyHandler
 
-                        if (proxyHandler.observer !== this) {
-                            proxyHandler.addObserver(this, producerPropertyKey)
+                        if (ObjectProxyHandler.observer !== this) {
+                            ObjectProxyHandler.addObserver(this, producerPropertyKey)
                         }
                     } else {
-                        descriptor.set.call(this.owner, ProxyHandler.create(value, this, producerPropertyKey))
+                        descriptor.set.call(this.owner, ObjectProxyHandler.create(value, this, producerPropertyKey))
                     }
                 } break
             }
@@ -461,21 +479,21 @@ export class Instrumentation {
 
                 for (const binder of bindersByKey) {
                     if (binder.active) {
-                        if (binder.producerPropertyKeyPath == pathStr) {
-                            if (binder.dispatch(value, oldValue, operation, path, '=') === ABORT_ACTION) {
-                                abortAction = true
-                                break
-                            }
-                        } else if (binder.producerPropertyKeyPathParts.slice(0, binder.producerPropertyKeyPathParts.length - 1).join('.').startsWith(pathStr)) {
-                            if (binder.dispatch(value, oldValue, operation, path, '<') === ABORT_ACTION) {
+                        if (pathContains(binder.producerPropertyPath, path)) {
+                            if (
+                                binder.dispatch(
+                                    value, oldValue, operation, path,
+                                    path.length === binder.producerPropertyPath.length ? '=' : '<'
+                                ) === ABORT_ACTION
+                            ) {
                                 abortAction = true
                                 break
                             }
                         } else if (
-                            path.length > binder.producerPropertyKeyPathParts.length &&
-                            pathStr.startsWith(`${binder.producerPropertyKeyPath}.`) &&
-                            binder.producerPropertyKeyPathRegExp &&
-                            binder.producerPropertyKeyPathRegExp.exec(path.slice(binder.producerPropertyKeyPathParts.length).join('.'))
+                            path.length > binder.producerPropertyPath.length &&
+                            pathContains(path, binder.producerPropertyPath) &&
+                            binder.producerPropertyPathRegExp &&
+                            binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))
                         ) {
                             if (binder.dispatch(value, oldValue, operation, path, '>') === ABORT_ACTION) {
                                 abortAction = true

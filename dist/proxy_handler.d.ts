@@ -1,7 +1,7 @@
 export declare const loggerObserver: {
     notify: (value: any, oldValue: any, operation: string, path: PropertyKey[]) => void;
 };
-export declare class ProxyHandler<T extends object> implements ProxyHandler<T> {
+export declare class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
     readonly backing: any;
     observer: any;
     propertyKey: PropertyKey;
@@ -15,4 +15,9 @@ export declare class ProxyHandler<T extends object> implements ProxyHandler<T> {
     get(target: T, p: PropertyKey, receiver: any): any;
     set(target: T, p: PropertyKey, value: any, receiver: any): boolean;
     deleteProperty(target: T, p: PropertyKey): boolean;
+}
+export declare class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+    _handlers: any;
+    readonly handlers: any;
+    get(target: T, p: PropertyKey, receiver: any): any;
 }

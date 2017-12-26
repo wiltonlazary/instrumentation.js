@@ -10,7 +10,7 @@ const booleanTruePropertyDefinition = {
     enumerable: false,
     configurable: false
 };
-class ProxyHandler {
+class ObjectProxyHandler {
     constructor(backing, observer, propertyKey) {
         this.backing = backing;
         this.observer = observer;
@@ -19,8 +19,14 @@ class ProxyHandler {
         this.observerIsMap = observer instanceof Map;
     }
     static create(backing, observer = null, propertyKey = null) {
-        const proxyHandler = new ProxyHandler(backing, observer, propertyKey);
-        const value = new Proxy(backing, new ProxyHandler(backing, observer, propertyKey));
+        let proxyHandler = null;
+        if (Array.isArray(backing)) {
+            proxyHandler = new ArrayProxyHandler(backing, observer, propertyKey);
+        }
+        else {
+            proxyHandler = new ObjectProxyHandler(backing, observer, propertyKey);
+        }
+        const value = new Proxy(backing, proxyHandler);
         Object.defineProperty(value, 'isProxy', booleanTruePropertyDefinition);
         Object.defineProperty(value, 'proxyHandler', {
             get: function () { return proxyHandler; },
@@ -90,7 +96,7 @@ class ProxyHandler {
             return value;
         }
         else {
-            value = ProxyHandler.create(value, this, p);
+            value = ObjectProxyHandler.create(value, this, p);
             this.backing[p] = value;
             return value;
         }
@@ -108,7 +114,66 @@ class ProxyHandler {
         return true;
     }
 }
-exports.ProxyHandler = ProxyHandler;
-global.ProxyHandler = ProxyHandler;
+exports.ObjectProxyHandler = ObjectProxyHandler;
+class ArrayProxyHandler extends ObjectProxyHandler {
+    constructor() {
+        super(...arguments);
+        this._handlers = null;
+    }
+    get handlers() {
+        const self = this;
+        if (this._handlers === null) {
+            this._handlers = {
+                push: (element) => {
+                    const res = self.backing.push(element);
+                    self.notify(element, undefined, 'push', [res - 1]);
+                    return res;
+                },
+                pop: () => {
+                    const index = self.backing.length - 1;
+                    const oldValue = index >= 0 ? self.backing[index] : undefined;
+                    const res = self.backing.pop();
+                    self.notify(undefined, oldValue, 'pop', [index]);
+                    return res;
+                },
+                unshift: (element) => {
+                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined;
+                    const res = self.backing.unshift(element);
+                    self.notify(element, oldValue, 'unshift', [0]);
+                    return res;
+                },
+                shift: () => {
+                    const oldValue = self.backing.length >= 1 ? self.backing[0] : undefined;
+                    const res = self.backing.shift();
+                    self.notify(self.backing.length >= 1 ? self.backing[0] : undefined, oldValue, 'shift', [0]);
+                    return res;
+                }
+            };
+        }
+        return this._handlers;
+    }
+    get(target, p, receiver) {
+        let value = this.backing[p];
+        if (typeof value === 'function') {
+            switch (p) {
+                case 'push':
+                    return this.handlers.push;
+                case 'pop':
+                    return this.handlers.pop;
+                case 'shift':
+                    return this.handlers.shift;
+                case 'unshift':
+                    return this.handlers.unshift;
+                default:
+                    return super.get(target, p, receiver);
+            }
+        }
+        else {
+            return super.get(target, p, receiver);
+        }
+    }
+}
+exports.ArrayProxyHandler = ArrayProxyHandler;
+global.ObjectProxyHandler = ObjectProxyHandler;
 
 //# sourceMappingURL=proxy_handler.js.map
