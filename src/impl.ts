@@ -3,7 +3,7 @@ import { BinderConsumerType, Binder, currentBinderDispatchDetail, bypassNextBind
 
 import {
     BindInParamsType, BindOutParamsType, getHeadPrototype, getHeadPrototypeFromInstance,
-    getPropertyDescriptorPrototype, getPropertyDescriptorPrototypeFromInstance, Instrumentation
+    getPropertyDescriptorPrototype, getPropertyDescriptorPrototypeFromInstance, Instrumentation, ABORT_ACTION
 } from './instrumentation'
 
 declare const global: any
@@ -16,6 +16,8 @@ if (!global) {
     }
 }
 
+global.ABORT_ACTION = ABORT_ACTION
+global.ObjectProxyHandler = ObjectProxyHandler
 global.bypassNextBinderDispatch = bypassNextBinderDispatch
 global.currentBinderDispatchDetail = currentBinderDispatchDetail
 global.getHeadPrototype = getHeadPrototype
@@ -66,7 +68,7 @@ Object.prototype['bind'] = function (expression: string, consumer: BinderConsume
     return this.instrumentation.bindOut(expression, consumer, consumerPropertyKey, active)
 }
 
-Object.prototype['bindOut'] = function (params: BindOutParamsType) {
+Object.prototype['bindOut'] = function (params: BindOutParamsType): any {
     params.forEach(element => {
         if (element.length === 2) {
             this.bind(element[0], element[1])
@@ -80,9 +82,11 @@ Object.prototype['bindOut'] = function (params: BindOutParamsType) {
             this.bind(element[0], element[1], element[2], element[3])
         }
     })
+
+    return this
 }
 
-Object.prototype['bindIn'] = function (params: BindInParamsType) {
+Object.prototype['bindIn'] = function (params: BindInParamsType): any {
     params.forEach(element => {
         if (element.length === 3) {
             if (typeof element[2] === 'function') {
@@ -106,6 +110,8 @@ Object.prototype['bindIn'] = function (params: BindInParamsType) {
             element[0].bind(element[1], this, element[2])
         }
     })
+
+    return this
 }
 
 Object.prototype['toProxy'] = function (): any {

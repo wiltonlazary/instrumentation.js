@@ -11,6 +11,8 @@ if (!global) {
         window['global'] = window;
     }
 }
+global.ABORT_ACTION = instrumentation_1.ABORT_ACTION;
+global.ObjectProxyHandler = proxy_handler_1.ObjectProxyHandler;
 global.bypassNextBinderDispatch = binder_1.bypassNextBinderDispatch;
 global.currentBinderDispatchDetail = binder_1.currentBinderDispatchDetail;
 global.getHeadPrototype = instrumentation_1.getHeadPrototype;
@@ -71,6 +73,7 @@ Object.prototype['bindOut'] = function (params) {
             this.bind(element[0], element[1], element[2], element[3]);
         }
     });
+    return this;
 };
 Object.prototype['bindIn'] = function (params) {
     params.forEach(element => {
@@ -99,6 +102,7 @@ Object.prototype['bindIn'] = function (params) {
             element[0].bind(element[1], this, element[2]);
         }
     });
+    return this;
 };
 Object.prototype['toProxy'] = function () {
     if (this.isProxy) {
