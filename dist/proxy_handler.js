@@ -16,6 +16,7 @@ class ObjectProxyHandler {
         this.observer = observer;
         this.propertyKey = propertyKey;
         this.observerIsMap = false;
+        this.proxyInstance = null;
         this.observerIsMap = observer instanceof Map;
     }
     static create(backing, observer = null, propertyKey = null) {
@@ -23,7 +24,7 @@ class ObjectProxyHandler {
         if (Array.isArray(backing)) {
             proxyHandler = new ArrayProxyHandler(backing, observer, propertyKey);
         }
-        if (backing instanceof Map) {
+        else if (backing instanceof Map) {
             proxyHandler = new MapProxyHandler(backing, observer, propertyKey);
         }
         else {
@@ -36,6 +37,7 @@ class ObjectProxyHandler {
             enumerable: false,
             configurable: false
         });
+        proxyHandler.proxyInstance = value;
         return value;
     }
     get isProxyHandler() {
@@ -121,6 +123,7 @@ exports.ObjectProxyHandler = ObjectProxyHandler;
 class ArrayProxyHandler extends ObjectProxyHandler {
     constructor() {
         super(...arguments);
+        this.isArray = true;
         this._handlers = null;
     }
     get handlers() {
@@ -177,9 +180,69 @@ class ArrayProxyHandler extends ObjectProxyHandler {
     }
 }
 exports.ArrayProxyHandler = ArrayProxyHandler;
+class MapProxyHandlerEntriesIterator {
+    constructor(backingMap, backing, observer) {
+        this.backingMap = backingMap;
+        this.backing = backing;
+        this.observer = observer;
+    }
+    next() {
+        let entry = this.backing.next();
+        let value = entry.value[1];
+        if (value instanceof Object) {
+            if (value.isProxy) {
+                const proxyHandler = value.proxyHandler;
+                if (proxyHandler.observer !== this.observer) {
+                    proxyHandler.addObserver(this.observer);
+                }
+            }
+            else {
+                const key = entry.value[0];
+                const newValue = ObjectProxyHandler.create(value, this.observer, key);
+                this.backingMap.set(key, newValue);
+                entry = {
+                    done: entry.done,
+                    value: [key, newValue]
+                };
+            }
+        }
+        return entry;
+    }
+}
+exports.MapProxyHandlerEntriesIterator = MapProxyHandlerEntriesIterator;
+class MapProxyHandlerValuesIterator {
+    constructor(backingMap, backing, observer) {
+        this.backingMap = backingMap;
+        this.backing = backing;
+        this.observer = observer;
+    }
+    next() {
+        let entry = this.backing.next();
+        const key = entry.value[0];
+        let value = entry.value[1];
+        if (value instanceof Object) {
+            if (value.isProxy) {
+                const proxyHandler = value.proxyHandler;
+                if (proxyHandler.observer !== this.observer) {
+                    proxyHandler.addObserver(this.observer);
+                }
+            }
+            else {
+                value = ObjectProxyHandler.create(value, this.observer, key);
+                this.backingMap.set(key, value);
+            }
+        }
+        return {
+            done: entry.done,
+            value: value
+        };
+    }
+}
+exports.MapProxyHandlerValuesIterator = MapProxyHandlerValuesIterator;
 class MapProxyHandler extends ObjectProxyHandler {
     constructor() {
         super(...arguments);
+        this.isMap = true;
         this._handlers = null;
     }
     get handlers() {
@@ -208,6 +271,23 @@ class MapProxyHandler extends ObjectProxyHandler {
                     const res = self.backing.delete(key);
                     this.notify(undefined, oldValue, 'delete', [key]);
                     return res;
+                },
+                entries: () => {
+                    return new MapProxyHandlerEntriesIterator(self.backing, self.backing.entries(), self);
+                },
+                values: () => {
+                    return new MapProxyHandlerValuesIterator(self.backing, self.backing.entries(), self);
+                },
+                clear: () => {
+                    const oldValue = self.backing.entries();
+                    const res = self.backing.clear();
+                    this.notify(undefined, oldValue, 'clear', ['*']);
+                    return res;
+                },
+                forEach: (callback, thisArg) => {
+                    for (const entry of self._handlers.entries()) {
+                        callback.call(thisArg, entry[1], entry[0], self.proxyInstance);
+                    }
                 }
             };
         }
@@ -223,6 +303,12 @@ class MapProxyHandler extends ObjectProxyHandler {
                     return this.handlers.set;
                 case 'delete':
                     return this.handlers.delete;
+                case 'entries':
+                    return this.handlers.entries;
+                case 'values':
+                    return this.handlers.values;
+                case 'clear':
+                    return this.handlers.clear;
                 default:
                     return super.get(target, p, receiver);
             }

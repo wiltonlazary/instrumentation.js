@@ -12,13 +12,14 @@ const booleanTruePropertyDefinition: PropertyDescriptor = {
 
 export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
     observerIsMap = false
+    proxyInstance: any = null
 
     static create(backing: any, observer: any = null, propertyKey: PropertyKey = null): any {
         let proxyHandler = null
 
         if (Array.isArray(backing)) {
             proxyHandler = new ArrayProxyHandler(backing, observer, propertyKey)
-        } if (backing instanceof Map) {
+        } else if (backing instanceof Map) {
             proxyHandler = new MapProxyHandler(backing, observer, propertyKey)
         } else {
             proxyHandler = new ObjectProxyHandler(backing, observer, propertyKey)
@@ -33,6 +34,7 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
             configurable: false
         })
 
+        proxyHandler.proxyInstance = value
         return value
     }
 
@@ -125,6 +127,7 @@ export class ObjectProxyHandler<T extends object> implements ProxyHandler<T> {
 }
 
 export class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+    isArray = true
     _handlers = null
 
     get handlers(): any {
@@ -184,7 +187,70 @@ export class ArrayProxyHandler<T extends object> extends ObjectProxyHandler<T> {
     }
 }
 
+export class MapProxyHandlerEntriesIterator {
+    constructor(public readonly backingMap: any, public readonly backing: any, public readonly observer: any) {
+
+    }
+
+    next(): any {
+        let entry = this.backing.next()
+        let value = entry.value[1]
+
+        if (value instanceof Object) {
+            if (value.isProxy) {
+                const proxyHandler = value.proxyHandler
+
+                if (proxyHandler.observer !== this.observer) {
+                    proxyHandler.addObserver(this.observer)
+                }
+            } else {
+                const key = entry.value[0]
+                const newValue = ObjectProxyHandler.create(value, this.observer, key)
+                this.backingMap.set(key, newValue)
+
+                entry = {
+                    done: entry.done,
+                    value: [key, newValue]
+                }
+            }
+        }
+
+        return entry
+    }
+}
+
+export class MapProxyHandlerValuesIterator {
+    constructor(public readonly backingMap: any, public readonly backing: any, public readonly observer: any) {
+
+    }
+
+    next(): any {
+        let entry = this.backing.next()
+        const key = entry.value[0]
+        let value = entry.value[1]
+
+        if (value instanceof Object) {
+            if (value.isProxy) {
+                const proxyHandler = value.proxyHandler
+
+                if (proxyHandler.observer !== this.observer) {
+                    proxyHandler.addObserver(this.observer)
+                }
+            } else {
+                value = ObjectProxyHandler.create(value, this.observer, key)
+                this.backingMap.set(key, value)
+            }
+        }
+
+        return {
+            done: entry.done,
+            value: value
+        }
+    }
+}
+
 export class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
+    isMap = true
     _handlers = null
 
     get handlers(): any {
@@ -214,6 +280,23 @@ export class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
                     const res = self.backing.delete(key)
                     this.notify(undefined, oldValue, 'delete', [key])
                     return res
+                },
+                entries: (): MapProxyHandlerEntriesIterator => {
+                    return new MapProxyHandlerEntriesIterator(self.backing, self.backing.entries(), self)
+                },
+                values: (): MapProxyHandlerValuesIterator => {
+                    return new MapProxyHandlerValuesIterator(self.backing, self.backing.entries(), self)
+                },
+                clear: (): any => {
+                    const oldValue = self.backing.entries()
+                    const res = self.backing.clear()
+                    this.notify(undefined, oldValue, 'clear', ['*'])
+                    return res
+                },
+                forEach: (callback, thisArg?): void => {
+                    for (const entry of self._handlers.entries()) {
+                        callback.call(thisArg, entry[1], entry[0], self.proxyInstance)
+                    }
                 }
             }
         }
@@ -232,6 +315,12 @@ export class MapProxyHandler<T extends object> extends ObjectProxyHandler<T> {
                     return this.handlers.set
                 case 'delete':
                     return this.handlers.delete
+                case 'entries':
+                    return this.handlers.entries
+                case 'values':
+                    return this.handlers.values
+                case 'clear':
+                    return this.handlers.clear
                 default:
                     return super.get(target, p, receiver)
             }
