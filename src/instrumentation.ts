@@ -12,20 +12,20 @@ const binderInstrumented = new Map<any, Map<any, PropertyCallTypeDetail>>()
 export type BindOutParamsType = Array<
     [string, (value: any, detai: BinderDispatchDetail) => any] |
     [string, (value: any, detai: BinderDispatchDetail) => any, boolean] |
-    [string, any, string] |
-    [string, any, string, boolean]
+    [string, any, any] |
+    [string, any, any, boolean]
     >
 
 export type BindInParamsType = Array<
     [any, string, (value: any, detai: BinderDispatchDetail) => any] |
     [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] |
-    [any, string, string] |
-    [any, string, string, boolean]
+    [any, string, any] |
+    [any, string, any, boolean]
     >
 
 export interface PropertyDescriptorPrototype {
     isPropertyDescriptorPrototype: boolean
-    propertyKey: string
+    propertyKey: PropertyKey
     descriptor: PropertyDescriptor
     prototype: any
 }
@@ -295,7 +295,7 @@ export class Instrumentation extends Object {
         return result
     }
 
-    instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail {
+    instrument(target: any, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyCallTypeDetail {
         if (typeof descriptor.value === 'function') {
             const originalMethod = descriptor.value
             delete target[propertyKey]
@@ -392,7 +392,7 @@ export class Instrumentation extends Object {
     }
 
     instrumentOwn(
-        propertyKey: string,
+        propertyKey: PropertyKey,
         descriptor: PropertyDescriptor
     ): PropertyCallTypeDetail {
         if (this.ownInstrumented === null) {

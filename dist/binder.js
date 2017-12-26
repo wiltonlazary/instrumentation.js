@@ -57,8 +57,8 @@ class Binder {
             const dispatchDetail = {
                 binder: this,
                 content: {
-                    dispatchValue: value,
-                    dispatchOldValue: oldValue,
+                    dispatchedValue: value,
+                    dispatchedOldValue: oldValue,
                     value: valueLocal,
                     oldValue: oldValueLocal,
                     operation: operation,

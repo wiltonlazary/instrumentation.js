@@ -3,12 +3,12 @@ import { Instrumentation, PropertyCallType, valueFromPath, ABORT_ACTION } from '
 export interface BinderDispatchDetail {
     binder: Binder
     content: {
-        dispatchValue: any
-        dispatchOldValue: any
+        dispatchedValue: any
+        dispatchedOldValue: any
         value: any
         oldValue: any
         operation: DispatchOperation
-        path: Array<string>
+        path: Array<any>
         match: DispatchMatch
     }
 }
@@ -59,7 +59,7 @@ export class Binder {
         return this._disposed
     }
 
-    dispatch(value: any, oldValue: any, operation: DispatchOperation, path: Array<string>, match: DispatchMatch): any {
+    dispatch(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any {
         let result = undefined
 
         if (_bypassNextBinderDispatch) {
@@ -81,8 +81,8 @@ export class Binder {
             const dispatchDetail: BinderDispatchDetail = {
                 binder: this,
                 content: {
-                    dispatchValue: value,
-                    dispatchOldValue: oldValue,
+                    dispatchedValue: value,
+                    dispatchedOldValue: oldValue,
                     value: valueLocal,
                     oldValue: oldValueLocal,
                     operation: operation,

@@ -5,11 +5,11 @@ export declare const ABORT_ACTION: {
 };
 export declare type PropertyCallType = 'none' | 'function' | 'setter' | 'writable';
 export declare type PropertyCallTypeDetail = [PropertyCallType, any];
-export declare type BindOutParamsType = Array<[string, (value: any, detai: BinderDispatchDetail) => any] | [string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [string, any, string] | [string, any, string, boolean]>;
-export declare type BindInParamsType = Array<[any, string, (value: any, detai: BinderDispatchDetail) => any] | [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [any, string, string] | [any, string, string, boolean]>;
+export declare type BindOutParamsType = Array<[string, (value: any, detai: BinderDispatchDetail) => any] | [string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [string, any, any] | [string, any, any, boolean]>;
+export declare type BindInParamsType = Array<[any, string, (value: any, detai: BinderDispatchDetail) => any] | [any, string, (value: any, detai: BinderDispatchDetail) => any, boolean] | [any, string, any] | [any, string, any, boolean]>;
 export interface PropertyDescriptorPrototype {
     isPropertyDescriptorPrototype: boolean;
-    propertyKey: string;
+    propertyKey: PropertyKey;
     descriptor: PropertyDescriptor;
     prototype: any;
 }
@@ -36,8 +36,8 @@ export declare class Instrumentation extends Object {
     addDeepBy(binder: Binder): void;
     removeDeepBy(binder: Binder): void;
     ensureIntrumentation(propertyKey: any, instrumentPrototype?: boolean): PropertyCallTypeDetail;
-    instrument(target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
-    instrumentOwn(propertyKey: string, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
+    instrument(target: any, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
+    instrumentOwn(propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyCallTypeDetail;
     bindOut(expression: string, consumer: any | ((any, Binder) => any), consumerPropertyKey?: any, active?: boolean): Binder;
     bindIn(binder: Binder): Binder;
     unbindOut(binder: Binder): void;
