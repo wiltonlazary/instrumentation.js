@@ -403,7 +403,7 @@ class Instrumentation extends Object {
             this.inBinders.set(binder.consumerPropertyKey, bindersLocal);
         }
         bindersLocal.add(binder);
-        binder.inInstrumentation = this;
+        binder.consumerInstrumentation = this;
         return binder;
     }
     unbindOut(binder) {

@@ -523,7 +523,7 @@ export class Instrumentation extends Object {
         }
 
         bindersLocal.add(binder)
-        binder.inInstrumentation = this
+        binder.consumerInstrumentation = this
         return binder
     }
 

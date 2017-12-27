@@ -1,5 +1,5 @@
 import { ObjectProxyHandler } from './proxy_handler';
-import { BinderConsumerType, Binder, currentBinderDispatchDetail, bypassNextBinderDispatch } from './binder'
+import { BinderConsumerType, Binder, currentBinderDispatchDetail, bypassNextBinderDispatch, abortNextBinderDispatch } from './binder'
 
 import {
     BindInParamsType, BindOutParamsType, getHeadPrototype, getHeadPrototypeFromInstance,
@@ -18,6 +18,7 @@ if (!global) {
 
 global.ABORT_ACTION = ABORT_ACTION
 global.ObjectProxyHandler = ObjectProxyHandler
+global.abortNextBinderDispatch = abortNextBinderDispatch
 global.bypassNextBinderDispatch = bypassNextBinderDispatch
 global.currentBinderDispatchDetail = currentBinderDispatchDetail
 global.getHeadPrototype = getHeadPrototype

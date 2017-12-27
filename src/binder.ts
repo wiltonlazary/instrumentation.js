@@ -15,6 +15,7 @@ export interface BinderDispatchDetail {
 
 let _currentBinderDispatchDetail: BinderDispatchDetail = null
 let _bypassNextBinderDispatch = false
+let _abortNextBinderDispatch = false
 
 export type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any
 export type DispatchOperation = 'init' | 'call' | 'delete' | 'set' | 'push' | 'pop' | 'unshift' | 'shift' | 'clear'
@@ -28,12 +29,16 @@ export function bypassNextBinderDispatch() {
     _bypassNextBinderDispatch = true
 }
 
+export function abortNextBinderDispatch() {
+    _abortNextBinderDispatch = true
+}
+
 export class Binder {
     _disposed = false
-    inInstrumentation: Instrumentation = null
+    consumerInstrumentation: Instrumentation = null
 
     constructor(
-        public readonly outInstrumentation: Instrumentation,
+        public readonly producerInstrumentation: Instrumentation,
         public readonly producer: any,
         public readonly producerPropertyKey: any,
         public readonly producerPropertyPath: Array<any>,
@@ -47,12 +52,12 @@ export class Binder {
     ) {
     }
 
-    get outOwner(): any {
-        return this.outInstrumentation.owner
+    get producerOwner(): any {
+        return this.producerInstrumentation.owner
     }
 
-    get inOwner(): any {
-        return !!this.inInstrumentation ? this.inInstrumentation.owner : null
+    get consumerOwner(): any {
+        return !!this.consumerInstrumentation ? this.consumerInstrumentation.owner : null
     }
 
     get disposed(): boolean {
@@ -62,9 +67,13 @@ export class Binder {
     dispatch(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any {
         let result = undefined
 
-        if (_bypassNextBinderDispatch) {
+        if (_abortNextBinderDispatch) {
+            _abortNextBinderDispatch = false
             _bypassNextBinderDispatch = false
             result = ABORT_ACTION
+        } else if (_bypassNextBinderDispatch) {
+            _abortNextBinderDispatch = false
+            _bypassNextBinderDispatch = false
         } else {
             let valueLocal = value
             let oldValueLocal = oldValue
@@ -74,7 +83,7 @@ export class Binder {
                 valueLocal = valueFromPath(value, templatePath, path)
                 oldValueLocal = valueFromPath(oldValue, templatePath, path)
             } else if (match === '>') {
-                valueLocal = valueFromPath(this.outOwner, this.producerPropertyPath, path)
+                valueLocal = valueFromPath(this.producerOwner, this.producerPropertyPath, path)
                 oldValueLocal = undefined
             }
 
@@ -121,10 +130,10 @@ export class Binder {
     dispose() {
         if (!this._disposed) {
             this._disposed = true
-            this.outInstrumentation.unbindOut(this)
+            this.producerInstrumentation.unbindOut(this)
 
-            if (this.inInstrumentation !== null) {
-                this.inInstrumentation.unbindIn(this)
+            if (this.consumerInstrumentation !== null) {
+                this.consumerInstrumentation.unbindIn(this)
             }
         }
     }

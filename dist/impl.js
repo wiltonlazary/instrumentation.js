@@ -13,6 +13,7 @@ if (!global) {
 }
 global.ABORT_ACTION = instrumentation_1.ABORT_ACTION;
 global.ObjectProxyHandler = proxy_handler_1.ObjectProxyHandler;
+global.abortNextBinderDispatch = binder_1.abortNextBinderDispatch;
 global.bypassNextBinderDispatch = binder_1.bypassNextBinderDispatch;
 global.currentBinderDispatchDetail = binder_1.currentBinderDispatchDetail;
 global.getHeadPrototype = instrumentation_1.getHeadPrototype;

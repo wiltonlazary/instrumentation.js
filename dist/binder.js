@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const instrumentation_1 = require("./instrumentation");
 let _currentBinderDispatchDetail = null;
 let _bypassNextBinderDispatch = false;
+let _abortNextBinderDispatch = false;
 function currentBinderDispatchDetail() {
     return _currentBinderDispatchDetail;
 }
@@ -11,9 +12,13 @@ function bypassNextBinderDispatch() {
     _bypassNextBinderDispatch = true;
 }
 exports.bypassNextBinderDispatch = bypassNextBinderDispatch;
+function abortNextBinderDispatch() {
+    _abortNextBinderDispatch = true;
+}
+exports.abortNextBinderDispatch = abortNextBinderDispatch;
 class Binder {
-    constructor(outInstrumentation, producer, producerPropertyKey, producerPropertyPath, producerPropertyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, consumerPropertyCallType, deep, active) {
-        this.outInstrumentation = outInstrumentation;
+    constructor(producerInstrumentation, producer, producerPropertyKey, producerPropertyPath, producerPropertyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, consumerPropertyCallType, deep, active) {
+        this.producerInstrumentation = producerInstrumentation;
         this.producer = producer;
         this.producerPropertyKey = producerPropertyKey;
         this.producerPropertyPath = producerPropertyPath;
@@ -25,22 +30,27 @@ class Binder {
         this.deep = deep;
         this.active = active;
         this._disposed = false;
-        this.inInstrumentation = null;
+        this.consumerInstrumentation = null;
     }
-    get outOwner() {
-        return this.outInstrumentation.owner;
+    get producerOwner() {
+        return this.producerInstrumentation.owner;
     }
-    get inOwner() {
-        return !!this.inInstrumentation ? this.inInstrumentation.owner : null;
+    get consumerOwner() {
+        return !!this.consumerInstrumentation ? this.consumerInstrumentation.owner : null;
     }
     get disposed() {
         return this._disposed;
     }
     dispatch(value, oldValue, operation, path, match) {
         let result = undefined;
-        if (_bypassNextBinderDispatch) {
+        if (_abortNextBinderDispatch) {
+            _abortNextBinderDispatch = false;
             _bypassNextBinderDispatch = false;
             result = instrumentation_1.ABORT_ACTION;
+        }
+        else if (_bypassNextBinderDispatch) {
+            _abortNextBinderDispatch = false;
+            _bypassNextBinderDispatch = false;
         }
         else {
             let valueLocal = value;
@@ -51,7 +61,7 @@ class Binder {
                 oldValueLocal = instrumentation_1.valueFromPath(oldValue, templatePath, path);
             }
             else if (match === '>') {
-                valueLocal = instrumentation_1.valueFromPath(this.outOwner, this.producerPropertyPath, path);
+                valueLocal = instrumentation_1.valueFromPath(this.producerOwner, this.producerPropertyPath, path);
                 oldValueLocal = undefined;
             }
             const dispatchDetail = {
@@ -98,9 +108,9 @@ class Binder {
     dispose() {
         if (!this._disposed) {
             this._disposed = true;
-            this.outInstrumentation.unbindOut(this);
-            if (this.inInstrumentation !== null) {
-                this.inInstrumentation.unbindIn(this);
+            this.producerInstrumentation.unbindOut(this);
+            if (this.consumerInstrumentation !== null) {
+                this.consumerInstrumentation.unbindIn(this);
             }
         }
     }
