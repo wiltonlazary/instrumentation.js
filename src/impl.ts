@@ -65,24 +65,26 @@ Object.prototype['dispose'] = function () {
     }
 }
 
-Object.prototype['bind'] = function (expression: string, consumer: BinderConsumerType, consumerPropertyKey?: any, active?: boolean): Binder {
-    return this.instrumentation.bindOut(expression, consumer, consumerPropertyKey, active)
-}
+Object.prototype['bindOut'] = function (...params): any {
+    const instrumentation = this.instrumentation
 
-Object.prototype['bindOut'] = function (params: BindOutParamsType): any {
-    params.forEach(element => {
-        if (element.length === 2) {
-            this.bind(element[0], element[1])
-        } if (element.length === 3) {
-            if (typeof element[1] === 'function') {
-                this.bind(element[0], element[1], undefined, element[2])
-            } else {
-                this.bind(element[0], element[1], element[2])
+    if (params.length === 1) {
+        params[0].forEach(element => {
+            if (element.length === 2) {
+                instrumentation.bindOut(element[0], element[1])
+            } if (element.length === 3) {
+                if (typeof element[1] === 'function') {
+                    instrumentation.bindOut(element[0], element[1], undefined, element[2])
+                } else {
+                    instrumentation.bindOut(element[0], element[1], element[2])
+                }
+            } else if (element.length === 4) {
+                instrumentation.bindOut(element[0], element[1], element[2], element[3])
             }
-        } else if (element.length === 4) {
-            this.bind(element[0], element[1], element[2], element[3])
-        }
-    })
+        })
+    } else {
+        instrumentation.bindOut(params[0], params[1], params[2], params[3])
+    }
 
     return this
 }
@@ -91,24 +93,16 @@ Object.prototype['bindIn'] = function (params: BindInParamsType): any {
     params.forEach(element => {
         if (element.length === 3) {
             if (typeof element[2] === 'function') {
-                element[0].bind(element[1], element[2])
+                element[0].bindOut(element[1], element[2])
             } else {
-                element[0].bind(element[1], this, element[2])
+                element[0].bindOut(element[1], this, element[2])
             }
         } else if (element.length === 4) {
             if (typeof element[2] === 'function') {
-                element[0].bind(element[1], element[2], undefined, element[3])
+                element[0].bindOut(element[1], element[2], undefined, element[3])
             } else {
-                element[0].bind(element[1], this, element[2], element[3])
+                element[0].bindOut(element[1], this, element[2], element[3])
             }
-        }
-    })
-
-    params.forEach(element => {
-        if (typeof element[2] === 'function') {
-            element[0].bind(element[1], element[2])
-        } else {
-            element[0].bind(element[1], this, element[2])
         }
     })
 

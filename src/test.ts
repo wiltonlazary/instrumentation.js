@@ -37,8 +37,10 @@ class Test extends Object {
 const test = new Test() as any
 
 // Data binding
+
+test.bindOut('obj1.x.y/.*', test, 'message')
+
 test.bindOut([
-    ['obj1.x.y/.*', test, 'message'],
     ['+obj1.name', test, 'message'],
     ['obj1.data/.*', (value, detail) => {
         console.log('bindOut detail content:', JSON.stringify(detail.content))
