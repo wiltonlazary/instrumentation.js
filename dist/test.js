@@ -33,6 +33,8 @@ class Test extends Object {
 const test = new Test();
 // Data binding
 test.bindOut('obj1.x.y/.*', test, 'message');
+test.bindOut(['obj1.x.y/.*', test, 'message']);
+test.bindOut([['obj1.x.y/.*', test, 'message']]);
 test.bindOut([
     ['+obj1.name', test, 'message'],
     ['obj1.data/.*', (value, detail) => {
@@ -48,6 +50,12 @@ test.bindOut([
             console.log('bindOut detail content:', JSON.stringify(detail.content));
         }]
 ]);
+test.bindIn(test, 'obj1.data/.*', (value, detail) => {
+    console.log('bindIn detail content:', JSON.stringify(detail.content));
+});
+test.bindIn([test, 'obj1.data/.*', (value, detail) => {
+        console.log('bindIn detail content:', JSON.stringify(detail.content));
+    }]);
 test.bindIn([
     [test, 'obj1.data/.*', (value, detail) => {
             console.log('bindIn detail content:', JSON.stringify(detail.content));

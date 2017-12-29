@@ -39,6 +39,8 @@ const test = new Test() as any
 // Data binding
 
 test.bindOut('obj1.x.y/.*', test, 'message')
+test.bindOut(['obj1.x.y/.*', test, 'message'])
+test.bindOut([['obj1.x.y/.*', test, 'message']])
 
 test.bindOut([
     ['+obj1.name', test, 'message'],
@@ -55,6 +57,14 @@ test.bindOut([
         console.log('bindOut detail content:', JSON.stringify(detail.content))
     }]
 ])
+
+test.bindIn(test, 'obj1.data/.*', (value, detail) => {
+    console.log('bindIn detail content:', JSON.stringify(detail.content))
+})
+
+test.bindIn([test, 'obj1.data/.*', (value, detail) => {
+    console.log('bindIn detail content:', JSON.stringify(detail.content))
+}])
 
 test.bindIn([
     [test, 'obj1.data/.*', (value, detail) => {

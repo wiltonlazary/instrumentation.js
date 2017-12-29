@@ -56,48 +56,81 @@ Object.prototype['dispose'] = function () {
 };
 Object.prototype['bindOut'] = function (...params) {
     const instrumentation = this.instrumentation;
+    let result = null;
     if (params.length === 1) {
-        params[0].forEach(element => {
-            if (element.length === 2) {
-                instrumentation.bindOut(element[0], element[1]);
+        const arr = params[0];
+        result = [];
+        if (arr.length > 0) {
+            if (arr[0] instanceof Array) {
+                arr.forEach((element) => {
+                    if (element.length === 2) {
+                        result.push(instrumentation.bindOut(element[0], element[1]));
+                    }
+                    if (element.length === 3) {
+                        if (typeof element[1] === 'function') {
+                            result.push(instrumentation.bindOut(element[0], element[1], undefined, element[2]));
+                        }
+                        else {
+                            result.push(instrumentation.bindOut(element[0], element[1], element[2]));
+                        }
+                    }
+                    else if (element.length === 4) {
+                        result.push(instrumentation.bindOut(element[0], element[1], element[2], element[3]));
+                    }
+                });
             }
-            if (element.length === 3) {
-                if (typeof element[1] === 'function') {
-                    instrumentation.bindOut(element[0], element[1], undefined, element[2]);
-                }
-                else {
-                    instrumentation.bindOut(element[0], element[1], element[2]);
-                }
+            else {
+                result.push(instrumentation.bindOut(arr[0], arr[1], arr[2], arr[3]));
             }
-            else if (element.length === 4) {
-                instrumentation.bindOut(element[0], element[1], element[2], element[3]);
-            }
-        });
+        }
     }
-    else {
-        instrumentation.bindOut(params[0], params[1], params[2], params[3]);
+    else if (params.length > 1) {
+        result = instrumentation.bindOut(params[0], params[1], params[2], params[3]);
     }
-    return this;
+    return result;
 };
-Object.prototype['bindIn'] = function (params) {
-    params.forEach(element => {
-        if (element.length === 3) {
-            if (typeof element[2] === 'function') {
-                element[0].bindOut(element[1], element[2]);
+function bindInProcessor(self, element, storage) {
+    let result = undefined;
+    if (element.length === 3) {
+        if (typeof element[2] === 'function') {
+            result = element[0].bindOut(element[1], element[2]);
+        }
+        else {
+            result = element[0].bindOut(element[1], self, element[2]);
+        }
+    }
+    else if (element.length === 4) {
+        if (typeof element[2] === 'function') {
+            result = element[0].bindOut(element[1], element[2], undefined, element[3]);
+        }
+        else {
+            result = element[0].bindOut(element[1], self, element[2], element[3]);
+        }
+    }
+    if (storage && result) {
+        storage.push(result);
+    }
+    return result;
+}
+Object.prototype['bindIn'] = function (...params) {
+    let result = null;
+    if (params.length === 1) {
+        const arr = params[0];
+        result = [];
+        if (arr.length > 0) {
+            if (arr[0] instanceof Array) {
+                arr.forEach((element) => {
+                    bindInProcessor(this, element, result);
+                });
             }
             else {
-                element[0].bindOut(element[1], this, element[2]);
+                bindInProcessor(this, arr, result);
             }
         }
-        else if (element.length === 4) {
-            if (typeof element[2] === 'function') {
-                element[0].bindOut(element[1], element[2], undefined, element[3]);
-            }
-            else {
-                element[0].bindOut(element[1], this, element[2], element[3]);
-            }
-        }
-    });
+    }
+    else if (params.length > 1) {
+        result = bindInProcessor(this, params);
+    }
     return this;
 };
 Object.prototype['toProxy'] = function () {
