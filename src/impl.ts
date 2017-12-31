@@ -54,7 +54,15 @@ if (Object.getOwnPropertyDescriptor(Object.prototype, 'instrumentation') === und
     })
 }
 
-Object.prototype['dispose'] = function () {
+function defineObjectMethod(name: string, value: any) {
+    Object.defineProperty(Object.prototype, name, {
+        enumerable: false,
+        configurable: false,
+        value: value
+    })
+}
+
+defineObjectMethod('dispose', function () {
     if (this.isProxy) {
         this.proxyHandler.dispose()
     }
@@ -63,9 +71,9 @@ Object.prototype['dispose'] = function () {
         this.__instrumentation.dispose()
         this.__instrumentation = undefined
     }
-}
+})
 
-Object.prototype['bindOut'] = function (...params): Binder | Array<Binder> {
+defineObjectMethod('bindOut', function (...params): Binder | Array<Binder> {
     const instrumentation = this.instrumentation
     let result = null
 
@@ -97,7 +105,7 @@ Object.prototype['bindOut'] = function (...params): Binder | Array<Binder> {
     }
 
     return result
-}
+})
 
 function bindInProcessor(self: any, element: Array<any>, storage?: Array<any>): Binder {
     let result: Binder = undefined
@@ -123,7 +131,7 @@ function bindInProcessor(self: any, element: Array<any>, storage?: Array<any>): 
     return result
 }
 
-Object.prototype['bindIn'] = function (...params): Binder | Array<Binder> {
+defineObjectMethod('bindIn', function (...params): Binder | Array<Binder> {
     let result = null
 
     if (params.length === 1) {
@@ -144,12 +152,12 @@ Object.prototype['bindIn'] = function (...params): Binder | Array<Binder> {
     }
 
     return this
-}
+})
 
-Object.prototype['toProxy'] = function (): any {
+defineObjectMethod('toProxy', function (): any {
     if (this.isProxy) {
         return this
     } else {
         return ObjectProxyHandler.create(this)
     }
-}
+})

@@ -45,7 +45,14 @@ if (Object.getOwnPropertyDescriptor(Object.prototype, 'instrumentation') === und
         }
     });
 }
-Object.prototype['dispose'] = function () {
+function defineObjectMethod(name, value) {
+    Object.defineProperty(Object.prototype, name, {
+        enumerable: false,
+        configurable: false,
+        value: value
+    });
+}
+defineObjectMethod('dispose', function () {
     if (this.isProxy) {
         this.proxyHandler.dispose();
     }
@@ -53,8 +60,8 @@ Object.prototype['dispose'] = function () {
         this.__instrumentation.dispose();
         this.__instrumentation = undefined;
     }
-};
-Object.prototype['bindOut'] = function (...params) {
+});
+defineObjectMethod('bindOut', function (...params) {
     const instrumentation = this.instrumentation;
     let result = null;
     if (params.length === 1) {
@@ -88,7 +95,7 @@ Object.prototype['bindOut'] = function (...params) {
         result = instrumentation.bindOut(params[0], params[1], params[2], params[3]);
     }
     return result;
-};
+});
 function bindInProcessor(self, element, storage) {
     let result = undefined;
     if (element.length === 3) {
@@ -112,7 +119,7 @@ function bindInProcessor(self, element, storage) {
     }
     return result;
 }
-Object.prototype['bindIn'] = function (...params) {
+defineObjectMethod('bindIn', function (...params) {
     let result = null;
     if (params.length === 1) {
         const arr = params[0];
@@ -132,14 +139,14 @@ Object.prototype['bindIn'] = function (...params) {
         result = bindInProcessor(this, params);
     }
     return this;
-};
-Object.prototype['toProxy'] = function () {
+});
+defineObjectMethod('toProxy', function () {
     if (this.isProxy) {
         return this;
     }
     else {
         return proxy_handler_1.ObjectProxyHandler.create(this);
     }
-};
+});
 
 //# sourceMappingURL=impl.js.map

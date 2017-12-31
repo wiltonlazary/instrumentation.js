@@ -1,6 +1,6 @@
 {
     "name": "instrumentation.js",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "Instrumentation and deep data binding for all objects",
     "main": "dist/index.js",
     "scripts": {
