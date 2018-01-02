@@ -1,4 +1,4 @@
-import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType } from './binder'
+import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType, BinderDispatchCarrier } from './binder'
 import { ObjectProxyHandler } from './proxy_handler'
 
 export const ABORT_ACTION = { toString: () => 'ABORT_ACTION' }
@@ -568,6 +568,10 @@ export class Instrumentation extends Object {
     }
 
     notify(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, execute?: [(value) => any, any]): any {
+        const carrier: BinderDispatchCarrier = {
+            value: value
+        }
+
         if (this.outBinders !== null) {
             const propertyKey = path[0].toString()
             let abortAction = false
@@ -582,7 +586,7 @@ export class Instrumentation extends Object {
                         if (pathContains(binder.producerPropertyPath, path)) {
                             if (
                                 binder.dispatch(
-                                    value, oldValue, operation, path,
+                                    carrier, oldValue, operation, path,
                                     path.length === binder.producerPropertyPath.length ? '=' : '<'
                                 ) === ABORT_ACTION
                             ) {
@@ -595,7 +599,7 @@ export class Instrumentation extends Object {
                             binder.producerPropertyPathRegExp &&
                             binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))
                         ) {
-                            if (binder.dispatch(value, oldValue, operation, path, '>') === ABORT_ACTION) {
+                            if (binder.dispatch(carrier, oldValue, operation, path, '>') === ABORT_ACTION) {
                                 abortAction = true
                                 break
                             }
@@ -605,12 +609,12 @@ export class Instrumentation extends Object {
             }
 
             if (!abortAction && !!execute) {
-                return execute[0].call(execute[1], value)
+                return execute[0].call(execute[1], carrier.value)
             } else {
                 return undefined
             }
         } else if (!!execute) {
-            return execute[0].call(execute[1], value)
+            return execute[0].call(execute[1], carrier.value)
         }
     }
 }

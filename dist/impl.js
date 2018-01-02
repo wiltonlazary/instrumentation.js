@@ -148,5 +148,8 @@ defineObjectMethod('toProxy', function () {
         return proxy_handler_1.ObjectProxyHandler.create(this);
     }
 });
+defineObjectMethod('toJson', function () {
+    return JSON.stringify(this);
+});
 
 //# sourceMappingURL=impl.js.map

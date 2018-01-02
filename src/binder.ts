@@ -1,7 +1,12 @@
 import { Instrumentation, PropertyCallType, valueFromPath, ABORT_ACTION } from './instrumentation'
 
+export interface BinderDispatchCarrier {
+    value: any
+}
+
 export interface BinderDispatchDetail {
     binder: Binder
+    carrier: BinderDispatchCarrier
     content: {
         dispatchedValue: any
         dispatchedOldValue: any
@@ -64,7 +69,7 @@ export class Binder {
         return this._disposed
     }
 
-    dispatch(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any {
+    dispatch(carrier: BinderDispatchCarrier, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any {
         let result = undefined
 
         if (_abortNextBinderDispatch) {
@@ -75,6 +80,7 @@ export class Binder {
             _abortNextBinderDispatch = false
             _bypassNextBinderDispatch = false
         } else {
+            const value = carrier.value
             let valueLocal = value
             let oldValueLocal = oldValue
 
@@ -89,6 +95,7 @@ export class Binder {
 
             const dispatchDetail: BinderDispatchDetail = {
                 binder: this,
+                carrier: carrier,
                 content: {
                     dispatchedValue: value,
                     dispatchedOldValue: oldValue,
