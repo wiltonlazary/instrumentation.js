@@ -1,6 +1,11 @@
 import { Instrumentation, PropertyCallType } from './instrumentation';
+export interface BinderDispatchCarrier {
+    value: any;
+    abort?: boolean;
+}
 export interface BinderDispatchDetail {
     binder: Binder;
+    carrier: BinderDispatchCarrier;
     content: {
         dispatchedValue: any;
         dispatchedOldValue: any;
@@ -35,6 +40,6 @@ export declare class Binder {
     readonly producerOwner: any;
     readonly consumerOwner: any;
     readonly disposed: boolean;
-    dispatch(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any;
+    dispatch(carrier: BinderDispatchCarrier, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any;
     dispose(): void;
 }

@@ -162,6 +162,6 @@ defineObjectMethod('toProxy', function (): any {
     }
 })
 
-defineObjectMethod('toJson', function (): string {
+defineObjectMethod('stringify', function (): string {
     return JSON.stringify(this)
 })

@@ -430,6 +430,9 @@ class Instrumentation extends Object {
         }
     }
     notify(value, oldValue, operation, path, execute) {
+        const carrier = {
+            value: value
+        };
         if (this.outBinders !== null) {
             const propertyKey = path[0].toString();
             let abortAction = false;
@@ -440,7 +443,7 @@ class Instrumentation extends Object {
                 for (const binder of bindersByKey) {
                     if (binder.active) {
                         if (pathContains(binder.producerPropertyPath, path)) {
-                            if (binder.dispatch(value, oldValue, operation, path, path.length === binder.producerPropertyPath.length ? '=' : '<') === exports.ABORT_ACTION) {
+                            if (binder.dispatch(carrier, oldValue, operation, path, path.length === binder.producerPropertyPath.length ? '=' : '<') === exports.ABORT_ACTION || carrier.abort) {
                                 abortAction = true;
                                 break;
                             }
@@ -449,7 +452,7 @@ class Instrumentation extends Object {
                             pathContains(path, binder.producerPropertyPath) &&
                             binder.producerPropertyPathRegExp &&
                             binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))) {
-                            if (binder.dispatch(value, oldValue, operation, path, '>') === exports.ABORT_ACTION) {
+                            if (binder.dispatch(carrier, oldValue, operation, path, '>') === exports.ABORT_ACTION || carrier.abort) {
                                 abortAction = true;
                                 break;
                             }
@@ -458,14 +461,14 @@ class Instrumentation extends Object {
                 }
             }
             if (!abortAction && !!execute) {
-                return execute[0].call(execute[1], value);
+                return execute[0].call(execute[1], carrier.value);
             }
             else {
                 return undefined;
             }
         }
         else if (!!execute) {
-            return execute[0].call(execute[1], value);
+            return execute[0].call(execute[1], carrier.value);
         }
     }
 }

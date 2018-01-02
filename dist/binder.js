@@ -41,7 +41,7 @@ class Binder {
     get disposed() {
         return this._disposed;
     }
-    dispatch(value, oldValue, operation, path, match) {
+    dispatch(carrier, oldValue, operation, path, match) {
         let result = undefined;
         if (_abortNextBinderDispatch) {
             _abortNextBinderDispatch = false;
@@ -53,6 +53,7 @@ class Binder {
             _bypassNextBinderDispatch = false;
         }
         else {
+            const value = carrier.value;
             let valueLocal = value;
             let oldValueLocal = oldValue;
             if (match === '<') {
@@ -66,6 +67,7 @@ class Binder {
             }
             const dispatchDetail = {
                 binder: this,
+                carrier: carrier,
                 content: {
                     dispatchedValue: value,
                     dispatchedOldValue: oldValue,

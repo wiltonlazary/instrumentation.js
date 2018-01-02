@@ -2,6 +2,7 @@ import { Instrumentation, PropertyCallType, valueFromPath, ABORT_ACTION } from '
 
 export interface BinderDispatchCarrier {
     value: any
+    abort?: boolean
 }
 
 export interface BinderDispatchDetail {

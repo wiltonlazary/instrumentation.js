@@ -588,7 +588,7 @@ export class Instrumentation extends Object {
                                 binder.dispatch(
                                     carrier, oldValue, operation, path,
                                     path.length === binder.producerPropertyPath.length ? '=' : '<'
-                                ) === ABORT_ACTION
+                                ) === ABORT_ACTION || carrier.abort
                             ) {
                                 abortAction = true
                                 break
@@ -599,7 +599,7 @@ export class Instrumentation extends Object {
                             binder.producerPropertyPathRegExp &&
                             binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))
                         ) {
-                            if (binder.dispatch(carrier, oldValue, operation, path, '>') === ABORT_ACTION) {
+                            if (binder.dispatch(carrier, oldValue, operation, path, '>') === ABORT_ACTION || carrier.abort) {
                                 abortAction = true
                                 break
                             }
