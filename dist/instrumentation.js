@@ -362,9 +362,9 @@ class Instrumentation extends Object {
                         const value = descriptor.get.call(this.owner);
                         if (value) {
                             if (value.isProxy) {
-                                const ObjectProxyHandler = value.proxyHandler;
-                                if (ObjectProxyHandler.observer !== this) {
-                                    ObjectProxyHandler.addObserver(this, producerPropertyKey);
+                                const objectProxyHandler = value.proxyHandler;
+                                if (objectProxyHandler.observer !== this) {
+                                    objectProxyHandler.addObserver(this, producerPropertyKey);
                                 }
                             }
                             else if (value instanceof Object) {
@@ -385,9 +385,9 @@ class Instrumentation extends Object {
                         const value = descriptor.value;
                         if (value) {
                             if (value.isProxy) {
-                                const ObjectProxyHandler = value.proxyHandler;
-                                if (ObjectProxyHandler.observer !== this) {
-                                    ObjectProxyHandler.addObserver(this, producerPropertyKey);
+                                const objectProxyHandler = value.proxyHandler;
+                                if (objectProxyHandler.observer !== this) {
+                                    objectProxyHandler.addObserver(this, producerPropertyKey);
                                 }
                             }
                             else if (value instanceof Object) {
