@@ -482,28 +482,40 @@ export class Instrumentation extends Object {
                     const descriptor = producerPropertyCallTypeDetail[1]
                     const value = descriptor.get.call(this.owner)
 
-                    if (value instanceof Object && value.isProxy) {
-                        const ObjectProxyHandler = value.proxyHandler
+                    if (value) {
+                        if (value.isProxy) {
+                            const ObjectProxyHandler = value.proxyHandler
 
-                        if (ObjectProxyHandler.observer !== this) {
-                            ObjectProxyHandler.addObserver(this, producerPropertyKey)
+                            if (ObjectProxyHandler.observer !== this) {
+                                ObjectProxyHandler.addObserver(this, producerPropertyKey)
+                            }
+                        } else if (value instanceof Object) {
+                            descriptor.set.call(this.owner, ObjectProxyHandler.create(value, this, producerPropertyKey))
+                        } else {
+                            descriptor.set.call(this.owner, value)
                         }
                     } else {
-                        descriptor.set.call(this.owner, ObjectProxyHandler.create(value, this, producerPropertyKey))
+                        descriptor.set.call(this.owner, value)
                     }
                 } break
                 case 'writable': {
                     const descriptor = producerPropertyCallTypeDetail[1]
                     const value = descriptor.value
 
-                    if (value instanceof Object && value.isProxy) {
-                        const ObjectProxyHandler = value.proxyHandler
+                    if (value) {
+                        if (value.isProxy) {
+                            const ObjectProxyHandler = value.proxyHandler
 
-                        if (ObjectProxyHandler.observer !== this) {
-                            ObjectProxyHandler.addObserver(this, producerPropertyKey)
+                            if (ObjectProxyHandler.observer !== this) {
+                                ObjectProxyHandler.addObserver(this, producerPropertyKey)
+                            }
+                        } else if (value instanceof Object) {
+                            descriptor.set.call(this.owner, ObjectProxyHandler.create(value, this, producerPropertyKey))
+                        } else {
+                            descriptor.set.call(this.owner, value)
                         }
                     } else {
-                        descriptor.value = ObjectProxyHandler.create(value, this, producerPropertyKey)
+                        descriptor.set.call(this.owner, value)
                     }
                 } break
             }
