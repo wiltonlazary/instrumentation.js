@@ -510,12 +510,12 @@ export class Instrumentation extends Object {
                                 ObjectProxyHandler.addObserver(this, producerPropertyKey)
                             }
                         } else if (value instanceof Object) {
-                            descriptor.set.call(this.owner, ObjectProxyHandler.create(value, this, producerPropertyKey))
+                            descriptor.value = ObjectProxyHandler.create(value, this, producerPropertyKey)
                         } else {
-                            descriptor.set.call(this.owner, value)
+                            descriptor.value = value
                         }
                     } else {
-                        descriptor.set.call(this.owner, value)
+                        descriptor.value = value
                     }
                 } break
             }

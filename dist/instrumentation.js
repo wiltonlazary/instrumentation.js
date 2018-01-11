@@ -391,14 +391,14 @@ class Instrumentation extends Object {
                                 }
                             }
                             else if (value instanceof Object) {
-                                descriptor.set.call(this.owner, proxy_handler_1.ObjectProxyHandler.create(value, this, producerPropertyKey));
+                                descriptor.value = proxy_handler_1.ObjectProxyHandler.create(value, this, producerPropertyKey);
                             }
                             else {
-                                descriptor.set.call(this.owner, value);
+                                descriptor.value = value;
                             }
                         }
                         else {
-                            descriptor.set.call(this.owner, value);
+                            descriptor.value = value;
                         }
                     }
                     break;
