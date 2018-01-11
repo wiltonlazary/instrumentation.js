@@ -620,7 +620,7 @@ export class Instrumentation extends Object {
                 }
             }
 
-            if (!abortAction && !!execute) {
+            if (!!execute && !abortAction && !carrier.abort && !carrier.preventDefault) {
                 return execute[0].call(execute[1], carrier.value)
             } else {
                 return undefined

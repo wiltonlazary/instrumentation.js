@@ -2,6 +2,7 @@ import { Instrumentation, PropertyCallType } from './instrumentation';
 export interface BinderDispatchCarrier {
     value: any;
     abort?: boolean;
+    preventDefault?: boolean;
 }
 export interface BinderDispatchDetail {
     binder: Binder;
