@@ -69,6 +69,12 @@ test.bindIn([test, 'obj1.data/.*', (value, detail) => {
 test.bindIn([
     [test, 'obj1.data/.*', (value, detail) => {
         console.log('bindIn detail content:', JSON.stringify(detail.content))
+
+        if (!detail.carrier.onFinished) {
+            detail.carrier.onFinished = (value, result) => {
+                console.log('detail.carrier.onFinished:', JSON.stringify(value))
+            }
+        }
     }]
 ])
 

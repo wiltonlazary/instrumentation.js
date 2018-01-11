@@ -131,7 +131,7 @@ export function valueFromPath(object, templatePlate: Array<any>, path: Array<any
         for (let i = 0; i < templatePlate.length; i++) {
             let key = templatePlate[i]
 
-            if (key === '*') {
+            if (key === '*' && path[i]) {
                 key = path[i]
             }
 
@@ -584,6 +584,8 @@ export class Instrumentation extends Object {
             value: value
         }
 
+        let result: any = undefined
+
         if (this.outBinders !== null) {
             const propertyKey = path[0].toString()
             let abortAction = false
@@ -621,12 +623,18 @@ export class Instrumentation extends Object {
             }
 
             if (!!execute && !abortAction && !carrier.abort && !carrier.preventDefault) {
-                return execute[0].call(execute[1], carrier.value)
+                result = execute[0].call(execute[1], carrier.value)
             } else {
-                return undefined
+                result = undefined
             }
         } else if (!!execute) {
-            return execute[0].call(execute[1], carrier.value)
+            result = execute[0].call(execute[1], carrier.value)
         }
+
+        if (carrier.onFinished) {
+            carrier.onFinished.call(this, carrier.value, result)
+        }
+
+        return result
     }
 }

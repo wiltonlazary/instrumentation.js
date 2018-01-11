@@ -4,6 +4,7 @@ export interface BinderDispatchCarrier {
     value: any
     abort?: boolean
     preventDefault?: boolean
+    onFinished?: (value: any, result: any) => void
 }
 
 export interface BinderDispatchDetail {
@@ -88,8 +89,9 @@ export class Binder {
 
             if (match === '<') {
                 const templatePath = this.producerPropertyPath.slice(path.length)
-                valueLocal = valueFromPath(value, templatePath, path)
-                oldValueLocal = valueFromPath(oldValue, templatePath, path)
+                const basePath = path.slice(1)
+                valueLocal = valueFromPath(value, templatePath, basePath)
+                oldValueLocal = valueFromPath(oldValue, templatePath, basePath)
             } else if (match === '>') {
                 valueLocal = valueFromPath(this.producerOwner, this.producerPropertyPath, path)
                 oldValueLocal = undefined

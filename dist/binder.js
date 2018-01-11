@@ -58,8 +58,9 @@ class Binder {
             let oldValueLocal = oldValue;
             if (match === '<') {
                 const templatePath = this.producerPropertyPath.slice(path.length);
-                valueLocal = instrumentation_1.valueFromPath(value, templatePath, path);
-                oldValueLocal = instrumentation_1.valueFromPath(oldValue, templatePath, path);
+                const basePath = path.slice(1);
+                valueLocal = instrumentation_1.valueFromPath(value, templatePath, basePath);
+                oldValueLocal = instrumentation_1.valueFromPath(oldValue, templatePath, basePath);
             }
             else if (match === '>') {
                 valueLocal = instrumentation_1.valueFromPath(this.producerOwner, this.producerPropertyPath, path);

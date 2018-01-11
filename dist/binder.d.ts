@@ -3,6 +3,7 @@ export interface BinderDispatchCarrier {
     value: any;
     abort?: boolean;
     preventDefault?: boolean;
+    onFinished?: (value: any, result: any) => void;
 }
 export interface BinderDispatchDetail {
     binder: Binder;
