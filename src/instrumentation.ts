@@ -482,7 +482,7 @@ export class Instrumentation extends Object {
                     const descriptor = producerPropertyCallTypeDetail[1]
                     const value = descriptor.get.call(this.owner)
 
-                    if (value.isProxy) {
+                    if (value instanceof Object && value.isProxy) {
                         const ObjectProxyHandler = value.proxyHandler
 
                         if (ObjectProxyHandler.observer !== this) {
@@ -496,7 +496,7 @@ export class Instrumentation extends Object {
                     const descriptor = producerPropertyCallTypeDetail[1]
                     const value = descriptor.value
 
-                    if (value.isProxy) {
+                    if (value instanceof Object && value.isProxy) {
                         const ObjectProxyHandler = value.proxyHandler
 
                         if (ObjectProxyHandler.observer !== this) {
