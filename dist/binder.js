@@ -74,7 +74,7 @@ class Binder {
             else if (match === '>') {
                 slicedOldValue = instrumentation_1.valueFromPath(this.producerOwner, this.producerPropertyPath, path);
                 //?is not possible to do a deep object clone and replace parts without compromises the immutability and relations?
-                slicedValue = undefined;
+                slicedValue = slicedOldValue;
             }
             const dispatchDetail = {
                 binder: this,

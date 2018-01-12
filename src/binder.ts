@@ -107,7 +107,7 @@ export class Binder {
                 slicedOldValue = valueFromPath(this.producerOwner, this.producerPropertyPath, path)
                 
                 //?is not possible to do a deep object clone and replace parts without compromises the immutability and relations?
-                slicedValue = undefined 
+                slicedValue = slicedOldValue 
             }
 
             const dispatchDetail: BinderDispatchDetail = {
