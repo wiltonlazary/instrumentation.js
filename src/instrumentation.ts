@@ -1,4 +1,4 @@
-import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType, BinderDispatchCarrier } from './binder'
+import { Binder, BinderDispatchDetail, DispatchOperation, BinderConsumerType, BinderDispatchCarrier, checkAbortNextBinderDispatch, cleanAbortNextBinderDispatch } from './binder'
 import { ObjectProxyHandler } from './proxy_handler'
 
 export const ABORT_ACTION = { toString: () => 'ABORT_ACTION' }
@@ -523,7 +523,10 @@ export class Instrumentation extends Object {
 
         if (init) {
             binder.dispatch(
-                this.owner[producerPropertyKey], undefined,
+                {
+                    value: this.owner[producerPropertyKey],
+                    oldValue: undefined
+                },
                 'init', [producerPropertyKey],
                 binder.producerPropertyPath.length === 1 ? '=' : '<'
             )
@@ -580,61 +583,66 @@ export class Instrumentation extends Object {
     }
 
     notify(value: any, oldValue: any, operation: DispatchOperation, path: Array<any>, execute?: [(value) => any, any]): any {
-        const carrier: BinderDispatchCarrier = {
-            value: value
-        }
+        if (checkAbortNextBinderDispatch()) {
+            cleanAbortNextBinderDispatch()
+        } else {
+            const carrier: BinderDispatchCarrier = {
+                value: value,
+                oldValue: oldValue
+            }
 
-        let result: any = undefined
+            let result: any = undefined
 
-        if (this.outBinders !== null) {
-            const propertyKey = path[0].toString()
-            let abortAction = false
-            const bindersByKey = this.outBinders.get(propertyKey)
+            if (this.outBinders !== null) {
+                const propertyKey = path[0].toString()
+                let abortAction = false
+                const bindersByKey = this.outBinders.get(propertyKey)
 
-            if (bindersByKey !== undefined) {
-                const pathStr = path.join('.')
-                const pathToMatch = path.slice(1).join('.')
+                if (bindersByKey !== undefined) {
+                    const pathStr = path.join('.')
+                    const pathToMatch = path.slice(1).join('.')
 
-                for (const binder of bindersByKey) {
-                    if (binder.active) {
-                        if (pathContains(binder.producerPropertyPath, path)) {
-                            if (
-                                binder.dispatch(
-                                    carrier, oldValue, operation, path,
-                                    path.length === binder.producerPropertyPath.length ? '=' : '<'
-                                ) === ABORT_ACTION || carrier.abort
+                    for (const binder of bindersByKey) {
+                        if (binder.active) {
+                            if (pathContains(binder.producerPropertyPath, path)) {
+                                if (
+                                    binder.dispatch(
+                                        carrier, operation, path,
+                                        path.length === binder.producerPropertyPath.length ? '=' : '<'
+                                    ) === ABORT_ACTION || carrier.abort
+                                ) {
+                                    abortAction = true
+                                    break
+                                }
+                            } else if (
+                                path.length > binder.producerPropertyPath.length &&
+                                pathContains(path, binder.producerPropertyPath) &&
+                                binder.producerPropertyPathRegExp &&
+                                binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))
                             ) {
-                                abortAction = true
-                                break
-                            }
-                        } else if (
-                            path.length > binder.producerPropertyPath.length &&
-                            pathContains(path, binder.producerPropertyPath) &&
-                            binder.producerPropertyPathRegExp &&
-                            binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))
-                        ) {
-                            if (binder.dispatch(carrier, oldValue, operation, path, '>') === ABORT_ACTION || carrier.abort) {
-                                abortAction = true
-                                break
+                                if (binder.dispatch(carrier, operation, path, '>') === ABORT_ACTION || carrier.abort) {
+                                    abortAction = true
+                                    break
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (!!execute && !abortAction && !carrier.abort && !carrier.preventDefault) {
+                if (!!execute && !abortAction && !carrier.abort && !carrier.preventDefault) {
+                    result = execute[0].call(execute[1], carrier.value)
+                } else {
+                    result = undefined
+                }
+            } else if (!!execute) {
                 result = execute[0].call(execute[1], carrier.value)
-            } else {
-                result = undefined
             }
-        } else if (!!execute) {
-            result = execute[0].call(execute[1], carrier.value)
-        }
 
-        if (carrier.onFinished) {
-            carrier.onFinished.call(this, carrier.value, result)
-        }
+            if (carrier.onFinished) {
+                carrier.onFinished.call(this, carrier.value, carrier.oldValue, result)
+            }
 
-        return result
+            return result
+        }
     }
 }

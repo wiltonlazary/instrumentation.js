@@ -1,21 +1,23 @@
 import { Instrumentation, PropertyCallType } from './instrumentation';
 export interface BinderDispatchCarrier {
     value: any;
+    oldValue: any;
     abort?: boolean;
     preventDefault?: boolean;
-    onFinished?: (value: any, result: any) => void;
+    onFinished?: (value: any, oldValue: any, result: any) => void;
 }
 export interface BinderDispatchDetail {
     binder: Binder;
     carrier: BinderDispatchCarrier;
     content: {
-        dispatchedValue: any;
-        dispatchedOldValue: any;
         value: any;
         oldValue: any;
+        slicedValue: any;
+        slicedOldValue: any;
         operation: DispatchOperation;
         path: Array<any>;
         match: DispatchMatch;
+        changed: boolean;
     };
 }
 export declare type BinderConsumerType = (value: any, detai: BinderDispatchDetail) => any | any;
@@ -24,6 +26,8 @@ export declare type DispatchMatch = '<' | '=' | '>';
 export declare function currentBinderDispatchDetail(): any;
 export declare function bypassNextBinderDispatch(): void;
 export declare function abortNextBinderDispatch(): void;
+export declare function checkAbortNextBinderDispatch(): boolean;
+export declare function cleanAbortNextBinderDispatch(): void;
 export declare class Binder {
     readonly producerInstrumentation: Instrumentation;
     readonly producer: any;
@@ -42,6 +46,6 @@ export declare class Binder {
     readonly producerOwner: any;
     readonly consumerOwner: any;
     readonly disposed: boolean;
-    dispatch(carrier: BinderDispatchCarrier, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any;
+    dispatch(carrier: BinderDispatchCarrier, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any;
     dispose(): void;
 }

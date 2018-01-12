@@ -2,22 +2,24 @@ import { Instrumentation, PropertyCallType, valueFromPath, ABORT_ACTION } from '
 
 export interface BinderDispatchCarrier {
     value: any
+    oldValue: any
     abort?: boolean
     preventDefault?: boolean
-    onFinished?: (value: any, result: any) => void
+    onFinished?: (value: any, oldValue: any, result: any) => void
 }
 
 export interface BinderDispatchDetail {
     binder: Binder
     carrier: BinderDispatchCarrier
     content: {
-        dispatchedValue: any
-        dispatchedOldValue: any
         value: any
         oldValue: any
+        slicedValue: any
+        slicedOldValue: any
         operation: DispatchOperation
         path: Array<any>
         match: DispatchMatch
+        changed: boolean
     }
 }
 
@@ -39,6 +41,14 @@ export function bypassNextBinderDispatch() {
 
 export function abortNextBinderDispatch() {
     _abortNextBinderDispatch = true
+}
+
+export function checkAbortNextBinderDispatch(): boolean {
+    return _abortNextBinderDispatch
+}
+
+export function cleanAbortNextBinderDispatch() {
+    _abortNextBinderDispatch = false
 }
 
 export class Binder {
@@ -72,7 +82,7 @@ export class Binder {
         return this._disposed
     }
 
-    dispatch(carrier: BinderDispatchCarrier, oldValue: any, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any {
+    dispatch(carrier: BinderDispatchCarrier, operation: DispatchOperation, path: Array<any>, match: DispatchMatch): any {
         let result = undefined
 
         if (_abortNextBinderDispatch) {
@@ -84,30 +94,34 @@ export class Binder {
             _bypassNextBinderDispatch = false
         } else {
             const value = carrier.value
-            let valueLocal = value
-            let oldValueLocal = oldValue
+            const oldValue = carrier.oldValue
+            let slicedValue = value
+            let slicedOldValue = oldValue
 
             if (match === '<') {
                 const templatePath = this.producerPropertyPath.slice(path.length)
                 const basePath = path.slice(1)
-                valueLocal = valueFromPath(value, templatePath, basePath)
-                oldValueLocal = valueFromPath(oldValue, templatePath, basePath)
+                slicedValue = valueFromPath(value, templatePath, basePath)
+                slicedOldValue = valueFromPath(oldValue, templatePath, basePath)
             } else if (match === '>') {
-                valueLocal = valueFromPath(this.producerOwner, this.producerPropertyPath, path)
-                oldValueLocal = undefined
+                slicedOldValue = valueFromPath(this.producerOwner, this.producerPropertyPath, path)
+                
+                //?is not possible to do a deep object clone and replace parts without compromises the immutability and relations?
+                slicedValue = undefined 
             }
 
             const dispatchDetail: BinderDispatchDetail = {
                 binder: this,
                 carrier: carrier,
                 content: {
-                    dispatchedValue: value,
-                    dispatchedOldValue: oldValue,
-                    value: valueLocal,
-                    oldValue: oldValueLocal,
+                    value: value,
+                    oldValue: oldValue,
+                    slicedValue: slicedValue,
+                    slicedOldValue: slicedOldValue,
                     operation: operation,
                     path: path,
-                    match: match
+                    match: match,
+                    changed: value != oldValue
                 }
             }
 
@@ -116,18 +130,18 @@ export class Binder {
 
             try {
                 if (this.consumerPropertyCallType === 'none') {
-                    result = this.consumer(valueLocal, dispatchDetail)
+                    result = this.consumer(slicedValue, dispatchDetail)
                 } else if (this.consumerPropertyCallType === 'function') {
                     if (this.producerPropertyCallTypeDetail[0] === 'function') {
-                        result = this.consumer[this.consumerPropertyKey](...valueLocal)
+                        result = this.consumer[this.consumerPropertyKey](...slicedValue)
                     } else {
-                        result = this.consumer[this.consumerPropertyKey](valueLocal)
+                        result = this.consumer[this.consumerPropertyKey](slicedValue)
                     }
                 } else {
                     if (this.producerPropertyCallTypeDetail[0] === 'function') {
-                        this.consumer[this.consumerPropertyKey] = valueLocal instanceof Array ? (valueLocal.length > 0 ? valueLocal[0] : undefined) : valueLocal
+                        this.consumer[this.consumerPropertyKey] = slicedValue instanceof Array ? (slicedValue.length > 0 ? slicedValue[0] : undefined) : slicedValue
                     } else {
-                        this.consumer[this.consumerPropertyKey] = valueLocal
+                        this.consumer[this.consumerPropertyKey] = slicedValue
                     }
                 }
             } finally {

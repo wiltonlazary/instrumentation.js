@@ -16,6 +16,14 @@ function abortNextBinderDispatch() {
     _abortNextBinderDispatch = true;
 }
 exports.abortNextBinderDispatch = abortNextBinderDispatch;
+function checkAbortNextBinderDispatch() {
+    return _abortNextBinderDispatch;
+}
+exports.checkAbortNextBinderDispatch = checkAbortNextBinderDispatch;
+function cleanAbortNextBinderDispatch() {
+    _abortNextBinderDispatch = false;
+}
+exports.cleanAbortNextBinderDispatch = cleanAbortNextBinderDispatch;
 class Binder {
     constructor(producerInstrumentation, producer, producerPropertyKey, producerPropertyPath, producerPropertyPathRegExp, producerPropertyCallTypeDetail, consumer, consumerPropertyKey, consumerPropertyCallType, deep, active) {
         this.producerInstrumentation = producerInstrumentation;
@@ -41,7 +49,7 @@ class Binder {
     get disposed() {
         return this._disposed;
     }
-    dispatch(carrier, oldValue, operation, path, match) {
+    dispatch(carrier, operation, path, match) {
         let result = undefined;
         if (_abortNextBinderDispatch) {
             _abortNextBinderDispatch = false;
@@ -54,51 +62,54 @@ class Binder {
         }
         else {
             const value = carrier.value;
-            let valueLocal = value;
-            let oldValueLocal = oldValue;
+            const oldValue = carrier.oldValue;
+            let slicedValue = value;
+            let slicedOldValue = oldValue;
             if (match === '<') {
                 const templatePath = this.producerPropertyPath.slice(path.length);
                 const basePath = path.slice(1);
-                valueLocal = instrumentation_1.valueFromPath(value, templatePath, basePath);
-                oldValueLocal = instrumentation_1.valueFromPath(oldValue, templatePath, basePath);
+                slicedValue = instrumentation_1.valueFromPath(value, templatePath, basePath);
+                slicedOldValue = instrumentation_1.valueFromPath(oldValue, templatePath, basePath);
             }
             else if (match === '>') {
-                valueLocal = instrumentation_1.valueFromPath(this.producerOwner, this.producerPropertyPath, path);
-                oldValueLocal = undefined;
+                slicedOldValue = instrumentation_1.valueFromPath(this.producerOwner, this.producerPropertyPath, path);
+                //?is not possible to do a deep object clone and replace parts without compromises the immutability and relations?
+                slicedValue = undefined;
             }
             const dispatchDetail = {
                 binder: this,
                 carrier: carrier,
                 content: {
-                    dispatchedValue: value,
-                    dispatchedOldValue: oldValue,
-                    value: valueLocal,
-                    oldValue: oldValueLocal,
+                    value: value,
+                    oldValue: oldValue,
+                    slicedValue: slicedValue,
+                    slicedOldValue: slicedOldValue,
                     operation: operation,
                     path: path,
-                    match: match
+                    match: match,
+                    changed: value != oldValue
                 }
             };
             const savedBinderBinderDispatchDetail = _currentBinderDispatchDetail;
             _currentBinderDispatchDetail = dispatchDetail;
             try {
                 if (this.consumerPropertyCallType === 'none') {
-                    result = this.consumer(valueLocal, dispatchDetail);
+                    result = this.consumer(slicedValue, dispatchDetail);
                 }
                 else if (this.consumerPropertyCallType === 'function') {
                     if (this.producerPropertyCallTypeDetail[0] === 'function') {
-                        result = this.consumer[this.consumerPropertyKey](...valueLocal);
+                        result = this.consumer[this.consumerPropertyKey](...slicedValue);
                     }
                     else {
-                        result = this.consumer[this.consumerPropertyKey](valueLocal);
+                        result = this.consumer[this.consumerPropertyKey](slicedValue);
                     }
                 }
                 else {
                     if (this.producerPropertyCallTypeDetail[0] === 'function') {
-                        this.consumer[this.consumerPropertyKey] = valueLocal instanceof Array ? (valueLocal.length > 0 ? valueLocal[0] : undefined) : valueLocal;
+                        this.consumer[this.consumerPropertyKey] = slicedValue instanceof Array ? (slicedValue.length > 0 ? slicedValue[0] : undefined) : slicedValue;
                     }
                     else {
-                        this.consumer[this.consumerPropertyKey] = valueLocal;
+                        this.consumer[this.consumerPropertyKey] = slicedValue;
                     }
                 }
             }

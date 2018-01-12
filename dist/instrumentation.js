@@ -405,7 +405,10 @@ class Instrumentation extends Object {
             }
         }
         if (init) {
-            binder.dispatch(this.owner[producerPropertyKey], undefined, 'init', [producerPropertyKey], binder.producerPropertyPath.length === 1 ? '=' : '<');
+            binder.dispatch({
+                value: this.owner[producerPropertyKey],
+                oldValue: undefined
+            }, 'init', [producerPropertyKey], binder.producerPropertyPath.length === 1 ? '=' : '<');
         }
         return binder;
     }
@@ -446,51 +449,57 @@ class Instrumentation extends Object {
         }
     }
     notify(value, oldValue, operation, path, execute) {
-        const carrier = {
-            value: value
-        };
-        let result = undefined;
-        if (this.outBinders !== null) {
-            const propertyKey = path[0].toString();
-            let abortAction = false;
-            const bindersByKey = this.outBinders.get(propertyKey);
-            if (bindersByKey !== undefined) {
-                const pathStr = path.join('.');
-                const pathToMatch = path.slice(1).join('.');
-                for (const binder of bindersByKey) {
-                    if (binder.active) {
-                        if (pathContains(binder.producerPropertyPath, path)) {
-                            if (binder.dispatch(carrier, oldValue, operation, path, path.length === binder.producerPropertyPath.length ? '=' : '<') === exports.ABORT_ACTION || carrier.abort) {
-                                abortAction = true;
-                                break;
+        if (binder_1.checkAbortNextBinderDispatch()) {
+            binder_1.cleanAbortNextBinderDispatch();
+        }
+        else {
+            const carrier = {
+                value: value,
+                oldValue: oldValue
+            };
+            let result = undefined;
+            if (this.outBinders !== null) {
+                const propertyKey = path[0].toString();
+                let abortAction = false;
+                const bindersByKey = this.outBinders.get(propertyKey);
+                if (bindersByKey !== undefined) {
+                    const pathStr = path.join('.');
+                    const pathToMatch = path.slice(1).join('.');
+                    for (const binder of bindersByKey) {
+                        if (binder.active) {
+                            if (pathContains(binder.producerPropertyPath, path)) {
+                                if (binder.dispatch(carrier, operation, path, path.length === binder.producerPropertyPath.length ? '=' : '<') === exports.ABORT_ACTION || carrier.abort) {
+                                    abortAction = true;
+                                    break;
+                                }
                             }
-                        }
-                        else if (path.length > binder.producerPropertyPath.length &&
-                            pathContains(path, binder.producerPropertyPath) &&
-                            binder.producerPropertyPathRegExp &&
-                            binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))) {
-                            if (binder.dispatch(carrier, oldValue, operation, path, '>') === exports.ABORT_ACTION || carrier.abort) {
-                                abortAction = true;
-                                break;
+                            else if (path.length > binder.producerPropertyPath.length &&
+                                pathContains(path, binder.producerPropertyPath) &&
+                                binder.producerPropertyPathRegExp &&
+                                binder.producerPropertyPathRegExp.exec(path.slice(binder.producerPropertyPath.length).join('.'))) {
+                                if (binder.dispatch(carrier, operation, path, '>') === exports.ABORT_ACTION || carrier.abort) {
+                                    abortAction = true;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
+                if (!!execute && !abortAction && !carrier.abort && !carrier.preventDefault) {
+                    result = execute[0].call(execute[1], carrier.value);
+                }
+                else {
+                    result = undefined;
+                }
             }
-            if (!!execute && !abortAction && !carrier.abort && !carrier.preventDefault) {
+            else if (!!execute) {
                 result = execute[0].call(execute[1], carrier.value);
             }
-            else {
-                result = undefined;
+            if (carrier.onFinished) {
+                carrier.onFinished.call(this, carrier.value, carrier.oldValue, result);
             }
+            return result;
         }
-        else if (!!execute) {
-            result = execute[0].call(execute[1], carrier.value);
-        }
-        if (carrier.onFinished) {
-            carrier.onFinished.call(this, carrier.value, result);
-        }
-        return result;
     }
 }
 exports.Instrumentation = Instrumentation;
